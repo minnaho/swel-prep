@@ -1,0 +1,11 @@
+this contains the old Monterey grid using SRTM 1.5 as bathymetry, which looked bad
+the new grid uses a high resolution DEM from NOAA that is 1/3 arc sec (~10 m horizontal
+resolution)
+
+https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.dem:3545/html
+
+1/3 arc second ~ 10 m resolution
+MHW referenced
+https://tidesandcurrents.noaa.gov/datums.html?id=9413450
+Need to subtract 0.55 m to DEM to get mean sea level for ROMS
+

@@ -1,0 +1,11 @@
+Interpolate WEC forcing from parent to child
+
+modify and run make_r2r_wec.m
+make_r2r_wec.m runs r2r_create_wec.m and r2r_make_wec.m
+
+r2r_create_wec.m
+creates WEC forcing file and initializes variables
+
+r2r_make_wec.m
+interpolates variables from parent to child grid
+

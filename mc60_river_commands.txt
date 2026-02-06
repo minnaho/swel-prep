@@ -1,0 +1,17 @@
+ncks -d nriver,0,7 smode200_riv.nc smode200_riv_mc60.nc
+
+ncatted -a "River 09",global,d,, smode200_riv_mc60.nc
+ncatted -a "River 10",global,d,, smode200_riv_mc60.nc
+ncatted -a "River 11",global,d,, smode200_riv_mc60.nc
+ncatted -a "River 12",global,d,, smode200_riv_mc60.nc
+ncatted -a "River 13",global,d,, smode200_riv_mc60.nc
+ncatted -a "River 14",global,d,, smode200_riv_mc60.nc
+ncatted -a "River 15",global,d,, smode200_riv_mc60.nc
+ncatted -a "River 16",global,d,, smode200_riv_mc60.nc
+ncatted -a history,global,d,, smode200_riv_mc60.nc
+
+mv smode200_riv_mc60.nc mc60_riv.nc
+ncatted -a River\ 04,global,o,c,"Pajaro River" mc60_riv.nc
+
+# if looking to interpolate rivers from parent to child grid
+# look in /data/project9/minnaho/swel/rivers/make_rivers_grid.py

@@ -1,0 +1,1 @@
+ncks -d wwv_time,23,,1 mc60_wec_smooth_ramp.20190415.nc mc60_wec_smooth_ramp.20190415_trim.nc

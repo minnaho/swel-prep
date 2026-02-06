@@ -1,0 +1,14 @@
+preparation scripts for dx = 60 m 
+Monterey Coast and San Francisco shelf grids
+
+1. add a sediment value to POC, CACO3, and Si
+  - bryini_bgcnest/make_r2r_ini_nest.m
+2. low pass filter for surface forcings to filter short wave radiation to constrain nitrification in BGC runs
+  - make_LowFreq_SRF.m
+
+
+from Pierre's:
+
+/data/project3/pdamien/ROMS_pdamien/Roms_tools_MF/Preprocessing_tools_Jeroen/Make_BryIni_BGCNest/make_r2r_ini_nest.m
+
+/data/project3/pdamien/ROMS_pdamien/Roms_tools_MF/Preprocessing_tools_New/Make_BGCfrc/make_LowFreq_SRF.m
