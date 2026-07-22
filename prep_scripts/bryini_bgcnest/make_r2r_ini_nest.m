@@ -25,8 +25,8 @@ disp(' ')
 %
 %   Parent...
 %
-     parscd.file    = '/data/project9/minnaho/swel/tides/smode_rst.20190415110120.nc' ; 
-     pargrd = '/data/project9/minnaho/swel/smode200_grd.nc' ;
+     parscd.file    = '/data/project3/minnaho/project9copy/swel/notides/smode_rst.20190415110120.nc' ; 
+     pargrd = '/data/project3/minnaho/project9copy/swel/smode200_grd.nc' ;
      parscd.N       = 100 ;
      parscd.theta_s = 6.0;
      parscd.theta_b = 6.0;
@@ -35,7 +35,7 @@ disp(' ')
      parscd.scoord = 'new2012';    % child 'new' or 'old' type scoord
     
 %%%%% child
-    romsdir    = '/data/project9/minnaho/swel/tides/';
+    romsdir    = '/data/project3/minnaho/project9copy/swel/notides/';
     chdgrd    = [romsdir 'mc60/mc60_grd.nc'];
     chdini    = [romsdir 'mc60/mc60_ini.20190415110120.nc'];
     chdscd.N      = 100;

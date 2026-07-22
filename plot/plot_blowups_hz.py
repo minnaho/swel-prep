@@ -157,7 +157,7 @@ cb = fig.colorbar(p_plot)
 cb.set_label('depth (m)',fontsize=16)
 ax.legend()
 #fig.savefig('testhz.png',bbox_inches='tight')
-fig.savefig('/tmp/testhz.png',dpi=150)
+fig.savefig('/tmp/testhz.png',dpi=600)
 
 #fig,ax = plt.subplots(1,1,subplot_kw=dict(projection=ccrs.PlateCarree()))
 #p_plot = ax.pcolormesh(mc_lon,mc_lat,mc_h,transform=ccrs.PlateCarree(),cmap='rainbow',vmin=0,vmax=100)

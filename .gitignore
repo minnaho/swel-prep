@@ -1,1 +1,15 @@
+# simulation/grid data
 *.nc
+
+# generated caches and figures
+*.npz
+*.png
+*.gif
+*.pyc
+__pycache__/
+
+# per-scenario job logs
+log_*.txt
+
+# local tool settings
+.claude/

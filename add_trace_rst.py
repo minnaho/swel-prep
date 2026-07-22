@@ -1,3 +1,6 @@
+# see ./tides/mc60/readme_tracer
+# add ptrace and rtrace to rst file
+
 import netCDF4 as nc
 import numpy as np
 import glob
@@ -5,7 +8,7 @@ import os
 import shutil
 
 # Input pattern for restart files
-file_pattern = "/data/project3/minnaho/swel/tides/mc60/wec/everything/rst/mc60_rst.20190418230117.???.nc"
+file_pattern = "/data/project3/minnaho/swel/tides/mc60/ampwec/rst/mc60_rst.20190418230120.???.nc"
 
 # Loop over all matching files
 for infile in glob.glob(file_pattern):
@@ -32,6 +35,14 @@ for infile in glob.glob(file_pattern):
                 if "temp" in ds.variables:
                     temp_var = ds.variables["temp"]
                     new_var.setncatts({k: temp_var.getncattr(k) for k in temp_var.ncattrs()})
+
+                # Override specific attributes
+                if var_name == "ptrace":
+                    new_var.long_name = "pipe tracer"
+                elif var_name == "rtrace":
+                    new_var.long_name = "river tracer"
+
+                new_var.units = "nondimensional"
 
                 # Initialize to zeros
                 new_var[:] = 0.0

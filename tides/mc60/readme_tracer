@@ -1,0 +1,51 @@
+rtrace and ptrace added to the model representing
+river tracer and pipe tracer
+
+added ptrace to mc60_pip_trace.nc with 
+/data/project1/minnaho/roms-tools/rivers/potw_pip.py
+
+added rtrace and ptrace to rst with 
+/data/project9/minnaho/swel/add_trace_rst.py
+
+added rtrace and ptrace to bry with
+ncap2 -O -s \
+'rtrace_west  = 0.0 * temp_west;
+ rtrace_south = 0.0 * temp_south;
+ rtrace_north = 0.0 * temp_north;' \
+mc60_bry.20190415110220.nc mc60_bry.20190415110220_rtrace.nc
+
+ncap2 -O -s \
+'ptrace_west  = 0.0 * temp_west;
+ ptrace_south = 0.0 * temp_south;
+ ptrace_north = 0.0 * temp_north;' \
+mc60_bry.20190415110220_rtrace.nc mc60_bry.20190415110220_trace.nc
+
+ncatted -O \
+-a long_name,rtrace_west,o,c,"river tracer" \
+-a units,rtrace_west,o,c,"nondimensional" \
+-a long_name,rtrace_south,o,c,"river tracer" \
+-a units,rtrace_south,o,c,"nondimensional" \
+-a long_name,rtrace_north,o,c,"river tracer" \
+-a units,rtrace_north,o,c,"nondimensional" \
+mc60_bry.20190415110220_trace.nc
+
+ncatted -O \
+-a long_name,ptrace_west,o,c,"pipe tracer" \
+-a units,ptrace_west,o,c,"nondimensional" \
+-a field,ptrace_west,o,c,"ptrace, scalar, series" \
+-a time,ptrace_west,o,c,"bry_time" \
+\
+-a long_name,ptrace_south,o,c,"pipe tracer" \
+-a units,ptrace_south,o,c,"nondimensional" \
+-a field,ptrace_south,o,c,"ptrace, scalar, series" \
+-a time,ptrace_south,o,c,"bry_time" \
+\
+-a long_name,ptrace_north,o,c,"pipe tracer" \
+-a units,ptrace_north,o,c,"nondimensional" \
+-a field,ptrace_north,o,c,"ptrace, scalar, series" \
+-a time,ptrace_north,o,c,"bry_time" \
+mc60_bry.20190415110220_trace.nc
+
+
+
+

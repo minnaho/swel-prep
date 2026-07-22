@@ -15,7 +15,7 @@ ncap2 -O -s \
 'ptrace_west  = 0.0 * temp_west;
  ptrace_south = 0.0 * temp_south;
  ptrace_north = 0.0 * temp_north;' \
-mc60_bry.20190415110220_rtrace.nc mc60_bry.20190415110220_trace.nc
+mc60_bry.20190415110220_rtrace.nc mc60_bry_trace.20190415110220.nc
 
 ncatted -O \
 -a long_name,rtrace_west,o,c,"river tracer" \
@@ -24,7 +24,7 @@ ncatted -O \
 -a units,rtrace_south,o,c,"nondimensional" \
 -a long_name,rtrace_north,o,c,"river tracer" \
 -a units,rtrace_north,o,c,"nondimensional" \
-mc60_bry.20190415110220_trace.nc
+mc60_bry_trace.20190415110220.nc
 
 ncatted -O \
 -a long_name,ptrace_west,o,c,"pipe tracer" \
@@ -41,7 +41,7 @@ ncatted -O \
 -a units,ptrace_north,o,c,"nondimensional" \
 -a field,ptrace_north,o,c,"ptrace, scalar, series" \
 -a time,ptrace_north,o,c,"bry_time" \
-mc60_bry.20190415110220_trace.nc
+mc60_bry_trace.20190415110220.nc
 
 
 

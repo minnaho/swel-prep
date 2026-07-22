@@ -1,0 +1,211 @@
+"""
+Time series of bottom (seafloor s_rho level) dissolved oxygen at four points,
+read directly from raw native s_rho BGC output (same source/scenarios as
+plot_cs_diag_o2.py).
+
+Points:
+  p0 — fixed grid index [eta, xi] = [948, 307]
+  p1 — fixed grid index [eta, xi] = [478,676]
+  p2 — south transect (from plot_cs_diag.py) intersection with the 50 m isobath
+  p3 — north transect (from plot_cs_diag.py) intersection with the 50 m isobath
+
+s_rho convention: index 0 = seafloor (see plot_hov_transect_raw.py), so
+"bottom" is the trivial single-level slice O2[:, 0, j, i].
+
+Output: ./figs/bottom_o2_timeseries.png
+"""
+
+import os
+import sys
+sys.path.append('/data/project3/minnaho/global/')
+import glob
+import numpy as np
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+from netCDF4 import Dataset, num2date
+from scipy.ndimage import map_coordinates
+import scenario_style as ss
+
+plt.rcParams.update({'font.size': 12})
+
+# ---------------------------------------------------------------------------
+# Configuration
+# ---------------------------------------------------------------------------
+GRD      = 'mc60_grd.nc'
+SAVEPATH = './figs/'
+
+SCENARIOS = {
+    'tideswec':     '/data/project3/minnaho/swel/tides/mc60/wec',
+    'tidesnowec':   '/data/project3/minnaho/swel/tides/mc60/nowec/output',
+    'notidesnowec': '/data/project3/minnaho/swel/notides/mc60/nowec/output',
+    'notideswec':   '/data/project3/minnaho/swel/notides/mc60/wec/rerun',
+    'ampwec':       '/data/project3/minnaho/swel/notides/mc60/wec/ampwec/everything',
+    'tidesampwec':  '/data/project3/minnaho/swel/tides/mc60/ampwec/everything',
+}
+LABELS  = ss.LABELS
+COLORS  = ss.COLORS
+LSTYLES = ss.LSTYLES
+
+# Transect geometry — identical to plot_cs_diag.py
+ETA0, XI0, SLOPE0 = 271, 543, -0.8   # transect 0
+ETA1, XI1, SLOPE1 = 832, 646,  0.6   # transect 1
+LENGTH_XI = 250
+N_PTS     = 300
+ISOBATH   = 50.0
+
+# ---------------------------------------------------------------------------
+# Grid
+# ---------------------------------------------------------------------------
+grdnc = Dataset(GRD, 'r')
+lat   = np.array(grdnc['lat_rho'][:])
+h     = np.array(grdnc['h'][:])
+
+
+def find_isobath_point(eta0, xi0, slope, target_depth=ISOBATH):
+    """Walk the transect line from the coast offshore (same parametrization
+    as build_transect() in plot_cs_diag.py) and return the nearest grid
+    index [eta, xi] where depth first crosses target_depth."""
+    xi  = np.linspace(xi0,  xi0  - LENGTH_XI, N_PTS)
+    eta = np.linspace(eta0, eta0 + slope * (-LENGTH_XI), N_PTS)
+    crd = np.array([eta, xi])
+    h_t = map_coordinates(h, crd, order=1, mode='nearest')
+
+    idx = np.where((h_t[:-1] < target_depth) & (h_t[1:] >= target_depth))[0]
+    if len(idx) == 0:
+        raise ValueError(
+            f'transect from (eta0={eta0}, xi0={xi0}) never crosses {target_depth} m'
+        )
+    i0   = idx[0]
+    frac = (target_depth - h_t[i0]) / (h_t[i0 + 1] - h_t[i0])
+    eta_c = eta[i0] + frac * (eta[i0 + 1] - eta[i0])
+    xi_c  = xi[i0]  + frac * (xi[i0 + 1]  - xi[i0])
+    return int(round(eta_c)), int(round(xi_c))
+
+
+# south = smaller latitude at the coastal end of the transect
+if lat[ETA0, XI0] < lat[ETA1, XI1]:
+    south_tr, north_tr = (ETA0, XI0, SLOPE0), (ETA1, XI1, SLOPE1)
+else:
+    south_tr, north_tr = (ETA1, XI1, SLOPE1), (ETA0, XI0, SLOPE0)
+
+south_pt = find_isobath_point(*south_tr)
+north_pt = find_isobath_point(*north_tr)
+
+POINTS = {
+    'p0':                       (948, 307),
+    'p1':                       (478,676),
+    'p2 (south transect, 50m)': south_pt,
+    'p3 (north transect, 50m)': north_pt,
+}
+
+for name, (j, i) in POINTS.items():
+    print(f'{name}: [eta={j}, xi={i}]  h={h[j, i]:.1f} m')
+
+# ---------------------------------------------------------------------------
+# File listing (handles flat vs bgc/ subdir layout, per plot_cs_diag*.py)
+# ---------------------------------------------------------------------------
+def src_glob(root):
+    sub  = os.path.join(root, 'bgc')
+    base = sub if os.path.isdir(sub) else root
+    return os.path.join(base, 'mc60_bgc.*.nc')
+
+
+def clean(arr):
+    arr = np.array(arr)
+    return np.where(np.abs(arr) > 1e30, np.nan, arr)
+
+
+# ---------------------------------------------------------------------------
+# Extract bottom O2 time series for one scenario
+# ---------------------------------------------------------------------------
+def compute_series(scen):
+    root  = SCENARIOS[scen]
+    files = sorted(glob.glob(src_glob(root)))
+    print(f'  [{scen}] {len(files)} bgc files', flush=True)
+
+    times_list = []
+    series = {name: [] for name in POINTS}
+
+    for f in files:
+        with Dataset(f) as nc:
+            ocean_time = np.array(nc.variables['ocean_time'][:])
+            times_list.extend(mdates.date2num(
+                num2date(ocean_time, 'seconds since 1995-01-01',
+                          only_use_cftime_datetimes=False)))
+            for name, (j, i) in POINTS.items():
+                series[name].extend(clean(nc.variables['O2'][:, 0, j, i]))
+
+    times = np.array(times_list)
+    idx   = np.argsort(times)
+    times = times[idx]
+    for name in POINTS:
+        series[name] = np.array(series[name])[idx]
+
+    return times, series
+
+
+# ---------------------------------------------------------------------------
+# Cache + main
+# ---------------------------------------------------------------------------
+os.makedirs(SAVEPATH, exist_ok=True)
+
+def cache_path(scen):
+    return f'{SAVEPATH}bottom_o2_timeseries_cache_{scen}.npz'
+
+def load_cache(scen):
+    cp = cache_path(scen)
+    if not os.path.exists(cp):
+        return None
+    cache = np.load(cp, allow_pickle=False)
+    times = cache['times']
+    series = {name: cache[f'series_{ii}'] for ii, name in enumerate(POINTS)}
+    return times, series
+
+def save_cache(scen, times, series):
+    cp = cache_path(scen)
+    cache_data = {'times': times}
+    for ii, name in enumerate(POINTS):
+        cache_data[f'series_{ii}'] = series[name]
+    np.savez(cp, **cache_data)
+    print(f'  saved cache -> {cp}', flush=True)
+
+all_series = {}
+for scen in SCENARIOS:
+    cached = load_cache(scen)
+    if cached is not None:
+        print(f'[{scen}] loading cache...', flush=True)
+        all_series[scen] = cached
+    else:
+        print(f'[{scen}] computing...', flush=True)
+        times, series = compute_series(scen)
+        all_series[scen] = (times, series)
+        save_cache(scen, times, series)
+
+# ---------------------------------------------------------------------------
+# Plot — one panel per point, all scenarios overlaid
+# ---------------------------------------------------------------------------
+fig, axes = plt.subplots(len(POINTS), 1, figsize=(12, 3 * len(POINTS)), sharex=True)
+
+for ax, name in zip(axes, POINTS):
+    j, i = POINTS[name]
+    for scen in SCENARIOS:
+        times, series = all_series[scen]
+        ax.plot(times, series[name], color=COLORS[scen], linestyle=LSTYLES[scen],
+                 label=LABELS[scen], linewidth=ss.lw(scen, base_lw=1.2))
+    ax.set_ylabel(r'bottom O$_2$ (mmol m$^{-3}$)')
+    ax.set_title(f'{name}  [eta={j}, xi={i}]  h={h[j, i]:.1f} m')
+    ax.grid(True, alpha=0.3)
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%b %d'))
+    ax.xaxis.set_major_locator(mdates.DayLocator(interval=2))
+
+axes[0].legend(loc='best', fontsize=9, ncol=len(SCENARIOS))
+axes[-1].set_xlabel('Date')
+plt.setp(axes[-1].xaxis.get_majorticklabels(), rotation=30, ha='right')
+
+plt.tight_layout()
+out = f'{SAVEPATH}bottom_o2_timeseries.png'
+plt.savefig(out, dpi=800, bbox_inches='tight')
+plt.close(fig)
+print(f'saved -> {out}')

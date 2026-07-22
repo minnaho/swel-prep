@@ -2,6 +2,8 @@ prepared forcing files using a combination of:
 ./prep_scripts/ -  see readme here
 /data/project1/minnaho/roms-tools/bgc - make_s2r_bgcSRF.m
 
+initial file created in bryini_bgcnest/ in this directory
+
 created WEC from SMODE 200 m WEC
 /data/project1/minnaho/roms-tools/bry_ini/*wec*
 then used ramp.py to ramp up the WEC overtime
@@ -17,35 +19,5 @@ created pipe file from Marco's .mat file
 /data/project1/minnaho/roms-tools/rivers/potw_grd.py
 /data/project1/minnaho/roms-tools/rivers/potw_pip.py
 
-added tracers to files using nco
-- rst: add_trace_rst.py
-- potw: /data/project1/minnaho/roms-tools/rivers/potw_pip.py
-- river: /data/project9/minnaho/swel/tides/mc60/rivpip/add_tracer_riv.py
-- bry: 
-ncap2 -O -s '
-    rtrace_west  = 0.0 * temp_west; 
-    rtrace_south = 0.0 * temp_south; 
-    rtrace_north = 0.0 * temp_north; '
-    mc60_bry.20190415110220.nc mc60_bry_rtrace.20190415110220.nc
-
-ncap2 -O -s \
-    ptrace_west  = 0.0 * temp_west; \
-    ptrace_south = 0.0 * temp_south; \
-    ptrace_north = 0.0 * temp_north; \ 
-    mc60_bry_rtrace.20190415110220.nc mc60_bry_trace.20190415110220.nc
-
-ncatted -O \
-  -a long_name,ptrace_north,o,c,"pipe tracer" \
-  -a units,ptrace_north,o,c,"mmol m-3" \
-  -a long_name,ptrace_south,o,c,"pipe tracer" \
-  -a units,ptrace_south,o,c,"mmol m-3" \
-  -a long_name,ptrace_west,o,c,"pipe tracer" \
-  -a units,ptrace_west,o,c,"mmol m-3" \
-  -a long_name,rtrace_north,o,c,"river tracer" \
-  -a units,rtrace_north,o,c,"mmol m-3" \
-  -a long_name,rtrace_south,o,c,"river tracer" \
-  -a units,rtrace_south,o,c,"mmol m-3" \
-  -a long_name,rtrace_west,o,c,"river tracer" \
-  -a units,rtrace_west,o,c,"mmol m-3" \
-  mc60_bry_trace.20190415110220.nc
-
+created grid bathymetry from monterey_13_mhw_2012.nc using
+/data/project9/minnaho/ucla-tools/bathy/topo.m
