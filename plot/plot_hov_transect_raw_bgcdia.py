@@ -55,7 +55,7 @@ SAVEPATH = './figs/hov_transect_bgcdia/'
 SCENARIOS = {
     'tidesampwec':  '/data/project3/minnaho/swel/tides/mc60/ampwec',
     'tidesnowec':   '/data/project3/minnaho/swel/tides/mc60/nowec/output',
-    'notidesnowec': '/data/project3/minnaho/swel/notides/mc60/nowec/output',
+    'notidesnowec': '/data/project3/minnaho/swel/notides/mc60/nowec',
 }
 LABELS = {
     'tidesampwec':  'tides, amplified WEC',

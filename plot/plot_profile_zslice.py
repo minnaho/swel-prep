@@ -166,8 +166,8 @@ for var in VARS_HIS + VARS_BGC + VARS_DIA:
     axL.set_title('full domain')
     axR.set_title('coastal (10 km)')
     axD.set_title(f'difference from {LABELS[BASELINE]}')
-    axL.legend(loc='best', fontsize=9)
-    axD.legend(loc='best', fontsize=9)
+    axL.legend(loc='best', fontsize=12)
+    axD.legend(loc='best', fontsize=12)
 
     plt.tight_layout()
     out = f'{SAVEPATH}profile_zslice_{var}.png'

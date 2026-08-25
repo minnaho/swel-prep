@@ -2,7 +2,6 @@ import os
 import glob
 import numpy as np
 from netCDF4 import Dataset
-from datetime import datetime
 
 FILL_THRESH = 0.9e33
 
@@ -12,22 +11,38 @@ grdnc = Dataset(grd,'r')
 masknc = np.array(grdnc.variables['mask_rho'])
 masknc[masknc==0] = np.nan
 
+# 10 m level from the general zslicefull product -- replaces the legacy
+# per-scenario his/zslice_10m + bgc/zslice_10m dirs, which only ever existed
+# for notidesnowec/tidesnowec (old naming tides_nowec/notides_nowec) and
+# never existed for ampwec/tidesampwec (confirmed: no his/zslice_10m or
+# bgc/zslice_10m under either ampwec raw dir, which isn't even split into
+# his/bgc subdirs -- files sit flat in ".../ampwec/everything/").
+# Same fix as calc_wtrace_flux.py.
+ZSLICE_ROOT = '/data/project1/minnaho/swel/zslicefull'
+DEPTH_IDX = 10   # confirmed depth[10] == -10.0 m
+
+# key: (zslice subdirectory alias, raw his dir for ocean_time lookup) --
+# same tuple shape/values as offshore_flux_zslice.py's scenarios dict
 scenarios = {
-    'tides_wec':     ('/data/project3/minnaho/swel/tides/mc60/wec/his/zslice_10m',
-                      '/data/project3/minnaho/swel/tides/mc60/wec/bgc/zslice_10m'),
-    'tides_nowec':   ('/data/project3/minnaho/swel/tides/mc60/nowec/output/his/zslice_10m',
-                      '/data/project3/minnaho/swel/tides/mc60/nowec/output/bgc/zslice_10m'),
-    'notides_nowec': ('/data/project3/minnaho/swel/notides/mc60/nowec/output/his/zslice_10m',
-                      '/data/project3/minnaho/swel/notides/mc60/nowec/output/bgc/zslice_10m'),
-    'notides_wec':   ('/data/project3/minnaho/swel/notides/mc60/wec/rerun/his/zslice_10m',
-                      '/data/project3/minnaho/swel/notides/mc60/wec/rerun/bgc/zslice_10m'),
+    'notidesnowec': ('notidesnowec',  '/data/project3/minnaho/swel/notides/mc60/nowec/his'),
+    'ampwec':       ('notidesampwec', '/data/project3/minnaho/swel/notides/mc60/wec/ampwec/everything'),
+    'tidesnowec':   ('tidesnowec',    '/data/project3/minnaho/swel/tides/mc60/nowec/output/his'),
+    'tidesampwec':  ('tidesampwec',   '/data/project3/minnaho/swel/tides/mc60/ampwec/everything'),
 }
 
+# tidesampwec's raw source has a trailing 1-timestep file
+# (...20190429110056) whose zslice output has no time dimension at all
+TIDESAMPWEC_EXCLUDE = ('20190429110056',)
 
-def get_matched_pairs(his_dir, bgc_dir):
-    his_files = sorted(glob.glob(os.path.join(his_dir, 'z_mc60_his.*.nc')))
-    bgc_files = [f for f in sorted(glob.glob(os.path.join(bgc_dir, 'z_mc60_bgc.*.nc')))
+
+def get_matched_pairs(zslice_alias):
+    zslice_dir = os.path.join(ZSLICE_ROOT, zslice_alias)
+    his_files = sorted(glob.glob(os.path.join(zslice_dir, 'z_mc60_his.*.nc')))
+    bgc_files = [f for f in sorted(glob.glob(os.path.join(zslice_dir, 'bgc', 'z_mc60_bgc.*.nc')))
                  if 'dia_avg' not in f]
+    if zslice_alias == 'tidesampwec':
+        his_files = [f for f in his_files if not any(x in f for x in TIDESAMPWEC_EXCLUDE)]
+        bgc_files = [f for f in bgc_files if not any(x in f for x in TIDESAMPWEC_EXCLUDE)]
     his_map = {os.path.basename(f).replace('z_mc60_his.', '').replace('.nc', ''): f
                for f in his_files}
     bgc_map = {os.path.basename(f).replace('z_mc60_bgc.', '').replace('.nc', ''): f
@@ -37,14 +52,14 @@ def get_matched_pairs(his_dir, bgc_dir):
 
 
 def load_masked(path, var):
-    data = np.array(Dataset(path)[var][:], dtype=np.float32)
+    data = np.array(Dataset(path)[var][:, DEPTH_IDX, :, :], dtype=np.float32)
     data[data > FILL_THRESH] = np.nan
     data = data*masknc
     return data
 
 
-def compute_flux(his_dir, bgc_dir):
-    pairs = get_matched_pairs(his_dir, bgc_dir)
+def compute_flux(zslice_alias, raw_his_dir):
+    pairs = get_matched_pairs(zslice_alias)
     print(f'  {len(pairs)} file pairs found')
 
     # Load all files, tracking per-file record counts for the time series
@@ -65,16 +80,19 @@ def compute_flux(his_dir, bgc_dir):
     mean_no3 = np.nanmean(no3_all, axis=0)  # (eta_rho, xi_rho)
 
     flux = (w_all - mean_w) * (no3_all - mean_no3)  # (total_nt, eta_rho, xi_rho)
+    # raw (no mean removal) product, for comparison against the parent
+    # smode200 solution's raw w*NO3 panel (plot_smode_wno3_10m.py)
+    raw_time_series = np.nanmean(w_all * no3_all, axis=(1, 2))  # (total_nt,)
     del w_all, no3_all
 
     # Time series: spatial mean at every record
     time_series = np.nanmean(flux, axis=(1, 2))  # (total_nt,)
 
-    # Read ocean_time from original his files for the time axis
-    orig_his_dir = os.path.dirname(his_dir)
+    # Read ocean_time from original his files for the time axis -- zslicefull
+    # files have no ocean_time variable at all
     ocean_times  = []
     for stamp, _ in file_meta:
-        orig = os.path.join(orig_his_dir, f'mc60_his.{stamp}.nc')
+        orig = os.path.join(raw_his_dir, f'mc60_his.{stamp}.nc')
         ocean_times.extend(np.array(Dataset(orig)['ocean_time'][:]).tolist())
 
     # PDF: all instantaneous w'NO3' values across all time steps and grid points
@@ -86,15 +104,16 @@ def compute_flux(his_dir, bgc_dir):
     bin_centers = 0.5 * (edges[:-1] + edges[1:])
 
     return dict(
-        time_series = time_series,
-        ocean_times = np.array(ocean_times),   # seconds since 1995-01-01
-        bin_centers = bin_centers,
-        pdf         = counts,
-        mean_flux   = float(np.nanmean(all_flux)),
+        time_series     = time_series,
+        raw_time_series = raw_time_series,
+        ocean_times     = np.array(ocean_times),   # seconds since 1995-01-01
+        bin_centers     = bin_centers,
+        pdf             = counts,
+        mean_flux       = float(np.nanmean(all_flux)),
     )
 
-def compute_env(his_dir, bgc_dir):
-    pairs = get_matched_pairs(his_dir, bgc_dir)
+def compute_env(zslice_alias, raw_his_dir):
+    pairs = get_matched_pairs(zslice_alias)
     print(f'  {len(pairs)} file pairs found')
 
     w_list, no3_list, file_meta = [], [], []
@@ -105,15 +124,15 @@ def compute_env(his_dir, bgc_dir):
         w_list.append(w)
         no3_list.append(no3)
 
-    w_all   = np.concatenate(w_list,   axis=0)  
+    w_all   = np.concatenate(w_list,   axis=0)
     no3_all = np.concatenate(no3_list, axis=0)
     del w_list, no3_list
 
     # Time mean at each grid point
-    mean_w   = np.nanmean(w_all,   axis=0)  
-    mean_no3 = np.nanmean(no3_all, axis=0)  
+    mean_w   = np.nanmean(w_all,   axis=0)
+    mean_no3 = np.nanmean(no3_all, axis=0)
 
-    flux = (w_all - mean_w) * (no3_all - mean_no3)  
+    flux = (w_all - mean_w) * (no3_all - mean_no3)
     del w_all, no3_all
 
     # --- ENVELOPE CALCULATION ---
@@ -123,10 +142,9 @@ def compute_env(his_dir, bgc_dir):
     time_series_mean = np.nanmean(flux, axis=(1, 2)) # (total_nt,)
 
     # Read ocean_time from original his files
-    orig_his_dir = os.path.dirname(his_dir)
     ocean_times  = []
     for stamp, _ in file_meta:
-        orig = os.path.join(orig_his_dir, f'mc60_his.{stamp}.nc')
+        orig = os.path.join(raw_his_dir, f'mc60_his.{stamp}.nc')
         ocean_times.extend(np.array(Dataset(orig)['ocean_time'][:]).tolist())
 
     # PDF calculation
@@ -146,10 +164,10 @@ def compute_env(his_dir, bgc_dir):
     )
 
 
-for name, (his_dir, bgc_dir) in scenarios.items():
+for name, (zslice_alias, raw_his_dir) in scenarios.items():
     print(f'Processing {name}...')
-    result = compute_flux(his_dir, bgc_dir)
-    resultenv = compute_env(his_dir, bgc_dir)
+    result = compute_flux(zslice_alias, raw_his_dir)
+    resultenv = compute_env(zslice_alias, raw_his_dir)
     outfile = f'wno3_flux_{name}.npz'
     np.savez(outfile, **result)
     outfileenv = f'wno3_env_{name}.npz'

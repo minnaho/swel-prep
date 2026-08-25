@@ -34,7 +34,7 @@ import ROMS_depths as depths
 SCENARIOS = {
     'tideswec':     '/data/project3/minnaho/swel/tides/mc60/wec',
     'tidesnowec':   '/data/project3/minnaho/swel/tides/mc60/nowec/output',
-    'notidesnowec': '/data/project3/minnaho/swel/notides/mc60/nowec/output',
+    'notidesnowec': '/data/project3/minnaho/swel/notides/mc60/nowec',
     'notideswec':   '/data/project3/minnaho/swel/notides/mc60/wec/rerun',
     'ampwec':       '/data/project3/minnaho/swel/notides/mc60/wec/ampwec/everything',
     'tidesampwec':  '/data/project3/minnaho/swel/tides/mc60/ampwec/everything',
@@ -228,12 +228,7 @@ for hf in range(n_files):
                 zr_t  = interp_section(zr3d,  tr['coords'], tr['mask'])
                 var_t = interp_section(var3d, tr['coords'], tr['mask'])
 
-                depth_mean = np.nanmean(zr_t, axis=1)
-                keep       = depth_mean >= tr['depth_lim']
-                zr_plot    = zr_t[keep, :]
-                var_plot   = var_t[keep, :]
-
-                pc = ax.pcolormesh(tr['lon'], zr_plot, var_plot,
+                pc = ax.pcolormesh(tr['lon'], zr_t, var_t,
                                    cmap=VAR_CMAP, vmin=VMIN, vmax=VMAX,
                                    shading='nearest')
                 ax.set_ylim([tr['depth_lim'], 0])

@@ -21,6 +21,14 @@ interpolation along a diagonal grid path. The mid transect (mid) is a direct
 slice at a fixed eta index -- already regular in longitude, so no
 interpolation is needed there.
 
+Layout: 3x2 grid of panels -- panel 1 (top-left) is the base case
+(notidesnowec) RAW time-mean drho/dz; the remaining 5 panels are each other
+scenario's time-mean drho/dz DIFFERENCED against the base case, as before.
+drho/dz has no fixed-range single-variable sibling script to copy a raw
+range from, so the raw panel's range is the base case's own 2nd/98th
+percentile over the plotted depth window. Two colorbars: one for the raw
+panel, one shared across the 5 diff panels.
+
 Output: ./figs/cs_diag_drhodz_diff_<ts|tn|mid>.png (one per transect)
 Cache:  ./figs/cs_diag_drhodz_cache_<scen>_<ts|tn|mid>.npz
 """
@@ -29,6 +37,7 @@ import os
 import sys
 sys.path.append('/data/project3/minnaho/global/')
 import glob
+import math
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')
@@ -70,6 +79,8 @@ RHO_OFFSET = RHO_REF - 1000.0
 
 DIFF_CMAP  = cmocean.cm.balance
 DIFF_LABEL = r'$\Delta\,(\partial\rho/\partial z)$ (kg m$^{-4}$)'
+RAW_CMAP   = cmocean.cm.dense_r
+RAW_LABEL  = r'$\partial\rho/\partial z$ (kg m$^{-4}$)'
 
 # Diagonal transect geometry (grid index space) -- same as plot_cs_diag.py / plot_cs_diag_rho.py
 ETA0       = 271       # south transect — starting eta index (coast end)
@@ -265,47 +276,100 @@ for scen, files in SCENARIO_FILES.items():
     drhodz_mean[scen] = drhodz_list
 
 # ---------------------------------------------------------------------------
-# Plot: difference from the base case (notidesnowec), one figure per transect
+# Plot: panel 1 = base case raw, panels 2-6 = diff from base case, one
+# figure per transect, laid out as a 3x2 grid (or nrows x 2 for however
+# many scenarios are actually present)
 # ---------------------------------------------------------------------------
 diff_scens = [s for s in SCENARIOS_ZSLICE if s != BASE_SCEN and s in drhodz_mean]
 
 for ti, tr in enumerate(TRANSECTS):
-    fig, axes = plt.subplots(len(diff_scens), 1, sharex=True,
-                             figsize=(10, 3 * len(diff_scens)))
-    if len(diff_scens) == 1:
-        axes = [axes]
-
-    diffs = {s: drhodz_mean[s][ti] - drhodz_mean[BASE_SCEN][ti] for s in diff_scens}
-    vmax = np.nanpercentile(
-        np.abs(np.concatenate([d.ravel() for d in diffs.values()])), 98)
+    n_panels = 1 + len(diff_scens)
+    ncols = 2
+    nrows = math.ceil(n_panels / ncols)
+    fig, axes = plt.subplots(nrows, ncols, sharex=True, sharey=True,
+                             figsize=(14, 4 * nrows))
+    axes_flat = np.atleast_1d(axes).flatten()
+    for ax in axes_flat[n_panels:]:
+        ax.axis('off')
 
     keep = DEPTH_1D >= tr['depth_lim']
-    for ax, scen in zip(axes, diff_scens):
-        pc = ax.pcolormesh(tr['lon'], DEPTH_1D[keep], diffs[scen][keep, :],
-                           cmap=DIFF_CMAP, vmin=-vmax, vmax=vmax, shading='nearest')
-        ax.set_ylim([tr['depth_lim'], 0])
+
+    def _format_ax(ax, row, col):
         if tr.get('xlim') is not None:
             ax.set_xlim(tr['xlim'])
         if tr.get('xticks') is not None:
             ax.set_xticks(tr['xticks'])
-        ax.set_ylabel('Depth (m)')
-        ax.set_title(f'{LABELS[scen]}  −  {LABELS[BASE_SCEN]}')
-
+        ax.set_ylim([tr['depth_lim'], 0])
         sf = ScalarFormatter(useOffset=False)
         sf.set_scientific(False)
         ax.xaxis.set_major_formatter(sf)
         if tr.get('xticks') is None:
             ax.xaxis.set_major_locator(MaxNLocator(5))
+        if col == 0:
+            ax.set_ylabel('Depth (m)')
+        if row == nrows - 1:
+            ax.set_xlabel('Longitude')
+        ax.label_outer()
 
-    axes[-1].set_xlabel('Longitude')
+    # panel 1: base case, raw time-mean drho/dz -- range from the base
+    # case's own 2nd/98th percentile over the plotted depth window (no
+    # fixed-range single-variable sibling script to copy from)
+    ax_raw = axes_flat[0]
+    base_field = drhodz_mean[BASE_SCEN][ti][keep, :]
+    raw_vmin, raw_vmax = np.nanpercentile(base_field, [2, 98])
+    pc_raw = ax_raw.pcolormesh(tr['lon'], DEPTH_1D[keep], base_field,
+                               cmap=RAW_CMAP, vmin=raw_vmin, vmax=raw_vmax,
+                               shading='nearest')
+    ax_raw.set_title(LABELS[BASE_SCEN])
+    _format_ax(ax_raw, 0, 0)
+
+    # panels 2-6: diff from base case
+    diffs = {s: drhodz_mean[s][ti] - drhodz_mean[BASE_SCEN][ti] for s in diff_scens}
+    vmax = np.nanpercentile(
+        np.abs(np.concatenate([d.ravel() for d in diffs.values()])), 98)
+
+    pc_diff = None
+    for i, scen in enumerate(diff_scens, start=1):
+        ax = axes_flat[i]
+        row, col = divmod(i, ncols)
+        pc_diff = ax.pcolormesh(tr['lon'], DEPTH_1D[keep], diffs[scen][keep, :],
+                                cmap=DIFF_CMAP, vmin=-vmax, vmax=vmax, shading='nearest')
+        ax.set_title(f'{LABELS[scen]}  −  {LABELS[BASE_SCEN]}')
+        _format_ax(ax, row, col)
+
+    fig.tight_layout()
+    fig.subplots_adjust(hspace=0.3)
     fig.canvas.draw()
-    pos_top = axes[0].get_position()
-    pos_bot = axes[-1].get_position()
-    cax = fig.add_axes([pos_top.x1 + 0.015, pos_bot.y0,
-                        0.012, pos_top.y1 - pos_bot.y0])
-    fig.colorbar(pc, cax=cax, label=DIFF_LABEL)
-    fig.suptitle('Time-averaged $\\partial\\rho/\\partial z$ difference from '
-                 f'{LABELS[BASE_SCEN]} — {tr["title"]}', y=0.92)
+
+    # two colorbars: raw (below panel 1 only) + diff (right of the grid).
+    # The raw colorbar sits centered in the actual gap between panel 1 and
+    # the panel below it (not a fixed offset), so it can't intrude into
+    # that panel -- a fixed -0.06 offset overlapped it because tight_layout's
+    # natural row gap is only ~0.024 fig-fraction.
+    pos_raw = ax_raw.get_position()
+    below = axes_flat[ncols] if n_panels > ncols else None
+    if below is not None:
+        gap_top, gap_bottom = pos_raw.y0, below.get_position().y1
+        cb_h = min(0.02, (gap_top - gap_bottom) * 0.4)
+        cb_y = gap_bottom + (gap_top - gap_bottom - cb_h) / 2
+    else:
+        cb_h, cb_y = 0.02, pos_raw.y0 - 0.06
+    cax_raw = fig.add_axes([pos_raw.x0, cb_y, pos_raw.width, cb_h])
+    cbar_raw = fig.colorbar(pc_raw, cax=cax_raw, orientation='horizontal', label=RAW_LABEL)
+    cbar_raw.ax.xaxis.set_label_position('top')
+    cbar_raw.ax.xaxis.set_ticks_position('top')
+    # the south transect's raw range gives matplotlib's auto-locator ~9
+    # ticks, too many for this narrow a colorbar and their labels overlap;
+    # thin to every other once it's actually crowded (north/mid stay at
+    # their default ~5 and are left alone)
+    raw_ticks = cbar_raw.get_ticks()
+    if len(raw_ticks) > 6:
+        cbar_raw.set_ticks(raw_ticks[::2])
+
+    pos_tr  = axes_flat[1].get_position()
+    pos_br  = axes_flat[n_panels - 1].get_position()
+    cax_diff = fig.add_axes([pos_tr.x1 + 0.015, pos_br.y0, 0.015, pos_tr.y1 - pos_br.y0])
+    fig.colorbar(pc_diff, cax=cax_diff, label=DIFF_LABEL)
 
     fname = f'{SAVEPATH}cs_diag_drhodz_diff_{tr["name"]}.png'
     plt.savefig(fname, dpi=800, bbox_inches='tight')

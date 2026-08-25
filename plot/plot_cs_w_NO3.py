@@ -24,8 +24,8 @@ hisfolder2 = '/data/project3/minnaho/swel/tides/mc60/nowec/output/his/mc60_his.*
 bgcfolder2 = '/data/project3/minnaho/swel/tides/mc60/nowec/output/bgc/mc60_bgc.*.nc'
 
 # 3. no tides no wec
-hisfolder3 = '/data/project3/minnaho/swel/notides/mc60/nowec/output/his/mc60_his.*.nc'
-bgcfolder3 = '/data/project3/minnaho/swel/notides/mc60/nowec/output/bgc/mc60_bgc.*.nc'
+hisfolder3 = '/data/project3/minnaho/swel/notides/mc60/nowec/his/mc60_his.*.nc'
+bgcfolder3 = '/data/project3/minnaho/swel/notides/mc60/nowec/bgc/mc60_bgc.*.nc'
 
 # 4. no tides wec
 hisfolder4 = '/data/project3/minnaho/swel/notides/mc60/wec/rerun/his/mc60_his.*.nc'

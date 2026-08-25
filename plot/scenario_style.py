@@ -7,9 +7,13 @@ STYLE = {
     'notidesnowec':  dict(color='darkorange', ls='--', label='no tides, no WEC'),
     'notideswec':    dict(color='firebrick', ls='-.', label='no tides, WEC'),
     # ampwec (raw naming) and notidesampwec (zslice-dir naming) are the SAME run
-    'ampwec':        dict(color='coral',     ls='--', label='no tides, 2.5× WEC'),
-    'notidesampwec': dict(color='coral',     ls='--', label='no tides, 2.5× WEC'),
+    'ampwec':        dict(color='pink',     ls='--', label='no tides, 2.5× WEC'),
+    'notidesampwec': dict(color='pink',     ls='--', label='no tides, 2.5× WEC'),
     'tidesampwec':   dict(color='cyan',      ls='--', label='tides, 2.5× WEC'),
+    # smode200 parent solution (no WEC) -- neutral tones so these read as
+    # reference curves and can't be confused with a child mc60 scenario
+    'parent_tides':   dict(color='black',   ls='-',  label='parent, tides'),
+    'parent_notides': dict(color='dimgray', ls='-.', label='parent, no tides'),
 }
 
 # amplified-WEC runs get the thicker line

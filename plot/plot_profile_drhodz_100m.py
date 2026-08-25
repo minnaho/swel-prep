@@ -74,8 +74,8 @@ for ax in (axL, axD):
 axL.set_ylabel('depth (m)')
 axL.set_title(r'$\partial\rho/\partial z$ (h $\leq$ 100 m)')
 axD.set_title(f'difference from {LABELS[BASELINE]}')
-axL.legend(loc='best', fontsize=9)
-axD.legend(loc='best', fontsize=9)
+axL.legend(loc='best', fontsize=16)
+#axD.legend(loc='best', fontsize=9)
 
 plt.tight_layout()
 os.makedirs('./figs', exist_ok=True)

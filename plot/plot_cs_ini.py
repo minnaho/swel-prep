@@ -40,7 +40,7 @@ CASES = [
 # ---------------------------------------------------------------------------
 # Variable configs
 # ---------------------------------------------------------------------------
-ISO_LEVELS = [24, 24.5, 25, 25.5, 26]
+ISO_LEVELS = [24, 24.25, 24.5, 24.75, 25, 25.25, 25.5, 25.75, 26]
 
 VAR_CONFIGS = {
     'w': dict(
@@ -190,23 +190,18 @@ for var, cfg in VAR_CONFIGS.items():
             var_t  = sec[var]
             rho_t  = sec['rho']
 
-            depth_mean = np.nanmean(zr_t, axis=1)
-            keep       = depth_mean >= tr['depth_lim']
-            zr_plot    = zr_t[keep, :]
-            var_plot   = var_t[keep, :]
-            rho_plot   = rho_t[keep, :]
-            kept_sections[case_name] = (zr_plot, var_plot, rho_plot)
+            kept_sections[case_name] = (zr_t, var_t, rho_t)
 
-            pc = ax.pcolormesh(tr['lon'], zr_plot, var_plot,
+            pc = ax.pcolormesh(tr['lon'], zr_t, var_t,
                                cmap=cfg['cmap'], vmin=cfg['vmin'], vmax=cfg['vmax'],
                                shading='nearest')
             pc_last = pc
 
             if cfg['iso']:
-                lon_2d = np.tile(tr['lon'], (zr_plot.shape[0], 1))
-                cs = ax.contour(lon_2d, zr_plot, rho_plot, levels=ISO_LEVELS,
+                lon_2d = np.tile(tr['lon'], (zr_t.shape[0], 1))
+                cs = ax.contour(lon_2d, zr_t, rho_t, levels=ISO_LEVELS,
                                 colors='k', linewidths=0.8)
-                ax.clabel(cs, fmt='%.1f', fontsize=9)
+                ax.clabel(cs, fmt='%.2f', fontsize=7)
 
             ax.set_ylim([tr['depth_lim'], 0])
             ax.set_ylabel('Depth (m)')
@@ -235,8 +230,8 @@ for var, cfg in VAR_CONFIGS.items():
                                     colors='k', linewidths=0.8, linestyles='-')
             cs_nt = ax_diff.contour(lon_2d, zr_nt, rho_nt, levels=ISO_LEVELS,
                                     colors='k', linewidths=0.8, linestyles='--')
-            ax_diff.clabel(cs_t,  fmt='%.1f', fontsize=9)
-            ax_diff.clabel(cs_nt, fmt='%.1f', fontsize=9)
+            ax_diff.clabel(cs_t,  fmt='%.2f', fontsize=7)
+            ax_diff.clabel(cs_nt, fmt='%.2f', fontsize=7)
 
         ax_diff.set_ylim([tr['depth_lim'], 0])
         ax_diff.set_ylabel('Depth (m)')

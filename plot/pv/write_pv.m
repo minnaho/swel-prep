@@ -3,7 +3,8 @@ addpath('/data/project3/minnaho/project9copy/ucla-tools/ini');
 gname = '../../mc60_grd.nc';
  %path  = '/data/project3/minnaho/swel/tides/mc60/wec/his/';
  %path  = '/data/project3/minnaho/swel/tides/mc60/nowec/output/his/';
- path  = '/data/project3/minnaho/swel/notides/mc60/nowec/output/his/';
+ %path  = '/data/project3/minnaho/swel/tides/mc60/ampwec/his/';
+ path = '/data/project3/minnaho/swel/notides/mc60/wec/ampwec/his/';
  list = dir([path 'mc60_his.*.nc']); % Added .nc to be specific
  nfiles = length(list);
 

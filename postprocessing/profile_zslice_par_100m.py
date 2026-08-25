@@ -16,9 +16,10 @@ Usage:
     python -u profile_zslice_par_100m.py $scen his > log_${scen}_his_100m.txt 2>&1 &
     python -u profile_zslice_par_100m.py $scen bgc > log_${scen}_bgc_100m.txt 2>&1 &
     python -u profile_zslice_par_100m.py $scen dia > log_${scen}_dia_100m.txt 2>&1 &
+    python -u profile_zslice_par_100m.py $scen ak  > log_${scen}_ak_100m.txt  2>&1 &
   done
 
-  # once all 15 are done:
+  # once all 24 are done:
   python -u profile_zslice_par_100m.py --merge
 
 Output per job:  zslice_profiles_100m_<scenario>_<filetype>.npz
@@ -36,14 +37,18 @@ GRD               = '../plot/mc60_grd.nc'
 COASTAL_MASK_FILE = '../plot/coastal_mask.nc'
 SCENARIOS   = ['tideswec', 'tidesnowec', 'notidesnowec', 'notideswec', 'ampwec', 'tidesampwec']
 SCEN_DIRS   = {'ampwec': 'notidesampwec'}
-FILETYPES   = ['his', 'bgc', 'dia']
+FILETYPES   = ['his', 'bgc', 'dia', 'ak']
 
 HIS_VARS = ['ptrace', 'rtrace', 'w', 'rho', 'u', 'v']
 BGC_VARS = ['NO3', 'NH4', 'SPC', 'DIATC', 'DIAZC',
             'SPCHL', 'DIATCHL', 'DIAZCHL', 'O2', 'DIC', 'DOC']
 DIA_VARS = ['TOT_PROD']
+# Akt/Akv live in a separate ak/ subdirectory (zslicefull/<scen>/ak/z_mc60_his.*.nc),
+# not the root z_mc60_his.*.nc that HIS_VARS reads from -- a distinct filetype
+# so adding them doesn't require rerunning the his/bgc/dia jobs.
+AK_VARS  = ['Akt', 'Akv']
 
-FILETYPE_VARS = {'his': HIS_VARS, 'bgc': BGC_VARS, 'dia': DIA_VARS}
+FILETYPE_VARS = {'his': HIS_VARS, 'bgc': BGC_VARS, 'dia': DIA_VARS, 'ak': AK_VARS}
 
 # ---------------------------------------------------------------------------
 # Parse arguments
@@ -101,6 +106,8 @@ if filetype == 'his':
     files = sorted(glob.glob(f'{ZSLICE_ROOT}/{scen_dir}/z_mc60_his.*.nc'))
 elif filetype == 'bgc':
     files = sorted(glob.glob(f'{ZSLICE_ROOT}/{scen_dir}/bgc/z_mc60_bgc.*.nc'))
+elif filetype == 'ak':
+    files = sorted(glob.glob(f'{ZSLICE_ROOT}/{scen_dir}/ak/z_mc60_his.*.nc'))
 else:
     files = sorted(glob.glob(f'{ZSLICE_ROOT}/{scen_dir}/dia/z_mc60_bgc_dia_avg.*.nc'))
 

@@ -38,14 +38,14 @@ MASK_FILE = '../plot/coastal_mask.nc'
 TRACER    = 'NO3'   # bgc-file variable name
 
 scenarios = {
-    'tides_wec':     ('/data/project3/minnaho/swel/tides/mc60/wec/his',
-                      '/data/project3/minnaho/swel/tides/mc60/wec/bgc'),
-    'tides_nowec':   ('/data/project3/minnaho/swel/tides/mc60/nowec/output/his',
-                      '/data/project3/minnaho/swel/tides/mc60/nowec/output/bgc'),
-    'notides_nowec': ('/data/project3/minnaho/swel/notides/mc60/nowec/output/his',
-                      '/data/project3/minnaho/swel/notides/mc60/nowec/output/bgc'),
-    'notides_wec':   ('/data/project3/minnaho/swel/notides/mc60/wec/rerun/his',
-                      '/data/project3/minnaho/swel/notides/mc60/wec/rerun/bgc'),
+    'notidesnowec': ('/data/project3/minnaho/swel/notides/mc60/nowec/his',
+                     '/data/project3/minnaho/swel/notides/mc60/nowec/bgc'),
+    'ampwec':       ('/data/project3/minnaho/swel/notides/mc60/wec/ampwec/everything',
+                     '/data/project3/minnaho/swel/notides/mc60/wec/ampwec/everything'),
+    'tidesnowec':   ('/data/project3/minnaho/swel/tides/mc60/nowec/output/his',
+                     '/data/project3/minnaho/swel/tides/mc60/nowec/output/bgc'),
+    'tidesampwec':  ('/data/project3/minnaho/swel/tides/mc60/ampwec/everything',
+                     '/data/project3/minnaho/swel/tides/mc60/ampwec/everything'),
 }
 
 # --- offshore (west) edge of the coastal band per eta row ---
@@ -127,9 +127,12 @@ def compute_flux(his_dir, bgc_dir):
 
 
 for name, (his_dir, bgc_dir) in scenarios.items():
+    out = f'offshore_flux_{name}.npz'
+    if os.path.exists(out):
+        print(f'Skipping {name} -- {out} already exists')
+        continue
     print(f'Processing {name} ...')
     flux, z_r, ot = compute_flux(his_dir, bgc_dir)
-    out = f'offshore_flux_{name}.npz'
     np.savez(out,
              offshore_flux = flux,
              z_r           = z_r,                 # (time, s_rho, n_valid) m, neg downward

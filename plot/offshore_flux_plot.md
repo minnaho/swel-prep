@@ -559,11 +559,12 @@ One shared colorbar on the right. No surface map panel.
 |-----|------|
 | `tideswec` | `/data/project3/minnaho/swel/tides/mc60/wec` |
 | `tidesnowec` | `/data/project3/minnaho/swel/tides/mc60/nowec/output` |
-| `notidesnowec` | `/data/project3/minnaho/swel/notides/mc60/nowec/output` |
-| `notideswec` | `/data/project3/minnaho/swel/notides/mc60/wec/base` |
+| `notidesnowec` | `/data/project3/minnaho/swel/notides/mc60/nowec` |
+| `notideswec` | `/data/project3/minnaho/swel/notides/mc60/wec/rerun` |
 | `ampwec` | `/data/project3/minnaho/swel/notides/mc60/wec/ampwec/notrace` |
 
-`notideswec` path updated to `.../wec/base` (previously `.../wec/output`).
+`notideswec` path updated to `.../wec/rerun` (previously `.../wec/base`, previously `.../wec/output`).
+`notidesnowec` path updated to `.../nowec` (previously `.../nowec/output`).
 `ampwec` is a new scenario with wave amplitude amplified 2.5×.
 
 `src_glob(root, kind)` helper transparently handles the flat file layout of

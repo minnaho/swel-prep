@@ -20,7 +20,7 @@ maskc  = np.array(grdnc.variables['mask_rho'])
 
 #WEC_DIR   = '/data/project3/minnaho/swel/tides/mc60/wec/his'
 WEC_DIR   = '/data/project3/minnaho/swel/notides/mc60/wec/ampwec/everything'
-NOWEC_DIR = '/data/project3/minnaho/swel/notides/mc60/nowec/output/his'
+NOWEC_DIR = '/data/project3/minnaho/swel/notides/mc60/nowec/his'
 
 wec_files   = sorted(glob.glob(os.path.join(WEC_DIR,   'mc60_his.*.nc')))
 nowec_files = sorted(glob.glob(os.path.join(NOWEC_DIR, 'mc60_his.*.nc')))

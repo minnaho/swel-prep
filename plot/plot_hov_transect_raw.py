@@ -62,9 +62,10 @@ SAVEPATH = './figs/hov_transect_raw/'
 SCENARIOS = {
     'tideswec':     '/data/project3/minnaho/swel/tides/mc60/wec',
     'tidesnowec':   '/data/project3/minnaho/swel/tides/mc60/nowec/output',
-    'notidesnowec': '/data/project3/minnaho/swel/notides/mc60/nowec/output',
+    'notidesnowec': '/data/project3/minnaho/swel/notides/mc60/nowec',
     'notideswec':   '/data/project3/minnaho/swel/notides/mc60/wec/rerun',
     'ampwec':       '/data/project3/minnaho/swel/notides/mc60/wec/ampwec/everything',
+    'tidesampwec':  '/data/project3/minnaho/swel/tides/mc60/ampwec/everything',
 }
 LABELS = {
     'tideswec':     'tides, WEC',
@@ -72,6 +73,7 @@ LABELS = {
     'notidesnowec': 'no tides, no WEC',
     'notideswec':   'no tides, WEC',
     'ampwec':       'no tides, 2.5× WEC',
+    'tidesampwec':  'tides, 2.5× WEC',
 }
 
 # ---------------------------------------------------------------------------
@@ -118,7 +120,7 @@ VAR_CONFIGS = {
     ),
     'O2': dict(
         cmap  = cmocean.cm.oxy,
-        vmin  = 0,
+        vmin  = 100,
         vmax  = 300,
         sym   = False,
         label = {
@@ -139,7 +141,7 @@ VAR_CONFIGS = {
     'phytoC': dict(
         cmap  = cmocean.cm.algae,
         vmin  = 0,
-        vmax  = 5,
+        vmax  = 20,
         sym   = False,
         label = {
             'avg':  r'$\langle$phyto C$\rangle$ (mmol C m$^{-3}$)',
@@ -238,6 +240,17 @@ def compute_hovmollers(scen):
     n_tr       = len(TRANSECTS)
     times_list = []
 
+    # true model restarts (a SLURM job resubmitted from a .rst file, not just
+    # a new 12h history-write chunk within one continuous run) leave a small
+    # numerical transient at that file's first timestep -- the leapfrog/AB3
+    # time-stepping loses its prior time levels and has to bootstrap with a
+    # lower-order step. Flagged here via the :init_file global attr (changes
+    # only at a true restart, confirmed against every his file's attr) so
+    # that one timestep can be NaN'd out below instead of rendering as a
+    # spurious full-transect vertical line in the Hovmoller
+    restart_flags_list = []
+    prev_init_file = None
+
     # running per-(var,transect,metric) accumulators (lists of (N_PTS,) rows)
     acc = {var: [{'avg': [], 'surf': [], 'bot': []} for _ in range(n_tr)]
            for var in ['w', 'N2', 'NO3', 'O2', 'phytoC']}
@@ -255,11 +268,20 @@ def compute_hovmollers(scen):
                 num2date(ocean_time, 'seconds since 1995-01-01',
                           only_use_cftime_datetimes=False)))
 
+            init_file = getattr(hnc, 'init_file', None)
+            is_restart = prev_init_file is not None and init_file != prev_init_file
+            restart_flags_list.extend([is_restart] + [False] * (n_t - 1))
+            prev_init_file = init_file
+
             for t_i in range(n_t):
                 zeta = np.squeeze(hnc.variables['zeta'][t_i, :, :])
                 z_w  = depths.get_zw_zeta(hnc, grdnc, zeta)   # (n_z+1, eta, xi)
-                Hz3d = np.diff(z_w, axis=0)                    # (n_z, eta, xi)
-                zr3d = 0.5 * (z_w[1:] + z_w[:-1])               # (n_z, eta, xi)
+                # masked with mask_plot like every field variable below -- h on
+                # land cells isn't NaN (clamped to a small placeholder, ~2m), so
+                # without this Hz3d/zr3d would silently leak thin fake land layers
+                # into any transect point whose bilinear neighbors include land
+                Hz3d = np.diff(z_w, axis=0)      * mask_plot   # (n_z, eta, xi)
+                zr3d = 0.5 * (z_w[1:] + z_w[:-1]) * mask_plot   # (n_z, eta, xi)
 
                 w3d       = clean(hnc.variables['w'][t_i])   * mask_plot
                 rho3d     = clean(hnc.variables['rho'][t_i]) * mask_plot
@@ -299,12 +321,17 @@ def compute_hovmollers(scen):
     times = np.array(times_list)
     idx   = np.argsort(times)
     times = times[idx]
+    restart_flags = np.array(restart_flags_list)[idx]
 
     hovs = {}
     for var, per_tr in acc.items():
         metrics = {}
         for metric in METRICS:
-            hov_list = [np.array(per_tr[ti][metric])[idx] for ti in range(n_tr)]
+            hov_list = []
+            for ti in range(n_tr):
+                arr = np.array(per_tr[ti][metric])[idx]
+                arr[restart_flags] = np.nan
+                hov_list.append(arr)
             metrics[metric] = (times, hov_list)
         hovs[var] = metrics
 
@@ -318,10 +345,16 @@ def compute_hovmollers(scen):
         no3_mean = np.nanmean(no3_sec, axis=0)
         flux_sec = (w_sec - w_mean[None]) * (no3_sec - no3_mean[None])  # (n_t, n_z, N_PTS)
 
-        avg_l.append(np.array([vavg2d(flux_sec[it], hz_sec[it])
-                                for it in range(flux_sec.shape[0])]))
-        surf_l.append(flux_sec[:, -1, :])
-        bot_l.append(flux_sec[:, 0, :])
+        avg_arr  = np.array([vavg2d(flux_sec[it], hz_sec[it])
+                              for it in range(flux_sec.shape[0])])
+        surf_arr = flux_sec[:, -1, :].copy()
+        bot_arr  = flux_sec[:, 0, :].copy()
+        avg_arr[restart_flags]  = np.nan
+        surf_arr[restart_flags] = np.nan
+        bot_arr[restart_flags]  = np.nan
+        avg_l.append(avg_arr)
+        surf_l.append(surf_arr)
+        bot_l.append(bot_arr)
     hovs["w'NO3'"] = {'avg': (times, avg_l), 'surf': (times, surf_l), 'bot': (times, bot_l)}
 
     return hovs

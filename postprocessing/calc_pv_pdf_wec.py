@@ -14,7 +14,7 @@ grd = '/data/project3/minnaho/project9copy/swel/mc60_grd.nc'
 # Use glob to grab all relevant PV history files
 tideswec_files = sorted(glob.glob('/data/project3/minnaho/swel/tides/mc60/wec/his/pv/mc60_his.2019*_pv.nc'))
 tidesnowec_files = sorted(glob.glob('/data/project3/minnaho/swel/tides/mc60/nowec/output/his/pv/mc60_his.2019*_pv.nc'))
-notidesnowec_files = sorted(glob.glob('/data/project3/minnaho/swel/notides/mc60/nowec/output/his/pv/mc60_his.2019*_pv.nc'))
+notidesnowec_files = sorted(glob.glob('/data/project3/minnaho/swel/notides/mc60/nowec/his/pv/mc60_his.2019*_pv.nc'))
 
 # Output paths for the individual arrays
 out_tideswec_path = './pdf8_pv_tideswec.npz'

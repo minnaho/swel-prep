@@ -29,7 +29,7 @@ import matplotlib.dates as mdates
 from matplotlib.ticker import FuncFormatter
 import cmocean
 
-TRACER     = 'ptrace'   # 'rtrace', 'ptrace', or 'NO3'
+TRACER     = 'NO3'   # 'rtrace', 'ptrace', or 'NO3'
 print(TRACER)
 NPZ_DIR    = '../postprocessing'
 NPZ_PREFIX = f'offshore_flux_{TRACER}' if TRACER != 'NO3' else 'offshore_flux'
@@ -60,10 +60,10 @@ def nice_round_up(x):
 
 # Row order matches plot_offshore_flux_hov.py
 scenario_rows = [
-    ('tides_wec',     'tides, WEC'),
-    ('notides_wec',   'no tides, WEC'),
-    ('tides_nowec',   'tides, no WEC'),
-    ('notides_nowec', 'no tides, no WEC'),
+    ('tidesampwec',   'tides, 2.5x WEC'),
+    ('ampwec',        'no tides, 2.5x WEC'),
+    ('tidesnowec',    'tides, no WEC'),
+    ('notidesnowec',  'no tides, no WEC'),
 ]
 
 axfont = 16

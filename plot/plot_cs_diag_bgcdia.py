@@ -47,7 +47,7 @@ import ROMS_depths as depths
 SCENARIOS = {
     'tidesampwec':  '/data/project3/minnaho/swel/tides/mc60/ampwec',
     'tidesnowec':   '/data/project3/minnaho/swel/tides/mc60/nowec/output',
-    'notidesnowec': '/data/project3/minnaho/swel/notides/mc60/nowec/output',
+    'notidesnowec': '/data/project3/minnaho/swel/notides/mc60/nowec',
 }
 LABELS = {
     'tidesampwec':  'tides, amplified WEC',
@@ -69,10 +69,11 @@ SP_LIM_VARS      = ['SP_N_LIM', 'SP_FE_LIM', 'SP_PO4_LIM',
 DIAT_UPTAKE_VARS = ['DIAT_NO3_UPTAKE', 'DIAT_NH4_UPTAKE', 'DIAT_NO2_UPTAKE',
                      'DIAT_SI_UPTAKE']
 SP_UPTAKE_VARS   = ['SP_NO3_UPTAKE', 'SP_NH4_UPTAKE', 'SP_NO2_UPTAKE']
+PAR_VARS         = ['PAR']
 
 LIM_VARS    = DIAT_LIM_VARS + SP_LIM_VARS
 UPTAKE_VARS = DIAT_UPTAKE_VARS + SP_UPTAKE_VARS
-PLOT_VARS   = LIM_VARS + UPTAKE_VARS
+PLOT_VARS   = LIM_VARS + UPTAKE_VARS + PAR_VARS
 
 VAR_LONG_NAME = {
     'DIAT_N_LIM':        'Diatom N limitation',
@@ -93,6 +94,7 @@ VAR_LONG_NAME = {
     'SP_NO3_UPTAKE':     'Small phyto NO3 uptake',
     'SP_NH4_UPTAKE':     'Small phyto NH4 uptake',
     'SP_NO2_UPTAKE':     'Small phyto NO2 uptake',
+    'PAR':               'PAR',
 }
 
 VAR_CONFIGS = {}
@@ -106,13 +108,18 @@ for _v in UPTAKE_VARS:
         cmap=cmocean.cm.algae, vmin=None, vmax=None,   # resolved per-file from plotted data
         label=f'{VAR_LONG_NAME[_v]} (mmol m$^{{-2}}$ s$^{{-1}}$)',
     )
+for _v in PAR_VARS:
+    VAR_CONFIGS[_v] = dict(
+        cmap=cmocean.cm.solar, vmin=None, vmax=None,   # resolved per-file from plotted data
+        label=f'{VAR_LONG_NAME[_v]} (W m$^{{-2}}$)',
+    )
 
 RHO_OFFSET = 0.0
 
 # Isopycnal contour overlay (sigma-t levels)
 RHO_REF_NC  = 1027.4             # ROMS reference density
 ISO_RHO_OFF = RHO_REF_NC - 1000  # = 27.4: stored rho + offset → sigma-t
-ISO_LEVELS  = [24, 24.5, 25, 25.5, 26]
+ISO_LEVELS  = [24, 24.25, 24.5, 24.75, 25, 25.25, 25.5, 25.75, 26]
 
 # Transect geometry (grid index space)
 ETA0       = 271       # transect 0 — starting eta index (coast end)
@@ -271,11 +278,11 @@ for prefix in common_prefixes:
     for var in PLOT_VARS:
         cfg = VAR_CONFIGS[var]
 
-        # precompute this var's plotted (transect-interpolated, depth-limited)
-        # section for every (scenario, transect) — reused for both the
-        # vmin/vmax calc below and the actual plotting loop, so
-        # interp_section only runs once per (scenario, transect)
-        plotted = {}   # (name, ti) -> (zr_plot, var_plot, rho_plot)
+        # precompute this var's plotted (transect-interpolated) section for
+        # every (scenario, transect) — reused for both the vmin/vmax calc
+        # below and the actual plotting loop, so interp_section only runs
+        # once per (scenario, transect)
+        plotted = {}   # (name, ti) -> (zr_t, var_t, rho_t)
         for name in SCENARIOS:
             if var not in scen_data[name]['var3d']:
                 continue
@@ -285,13 +292,10 @@ for prefix in common_prefixes:
                     continue
                 var_t = interp_section(scen_data[name]['var3d'][var],
                                        tr['coords'], tr['mask'])
-                depth_mean = np.nanmean(zr_t, axis=1)
-                keep       = depth_mean >= tr['depth_lim']
-                plotted[(name, ti)] = (zr_t[keep, :], var_t[keep, :], rho_t[keep, :])
+                plotted[(name, ti)] = (zr_t, var_t, rho_t)
 
         # resolve vmin/vmax for uptake vars from the actual plotted cross-
-        # section data (not the full 3D domain, which can be dominated by
-        # values far from the transect) — LIM vars keep their fixed 0-1 scale
+        # section data — LIM vars keep their fixed 0-1 scale
         sections = [v[1] for v in plotted.values()]
         if cfg['vmin'] is None:
             vmin = min(np.nanmin(s) for s in sections) if sections else 0.0
@@ -320,7 +324,7 @@ for prefix in common_prefixes:
                 lon_2d = np.tile(tr['lon'], (zr_plot.shape[0], 1))
                 cs = ax.contour(lon_2d, zr_plot, rho_plot, levels=ISO_LEVELS,
                                 colors='k', linewidths=0.8)
-                ax.clabel(cs, fmt='%.1f', fontsize=9)
+                ax.clabel(cs, fmt='%.2f', fontsize=7)
                 ax.set_ylim([tr['depth_lim'], 0])
                 ax.set_ylabel('Depth (m)')
                 ax.set_title(LABELS[name])

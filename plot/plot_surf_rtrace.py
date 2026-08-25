@@ -13,21 +13,21 @@ import cmocean
 
 grd = 'mc60_grd.nc'
 
-# tides wec
-sce = 'tideswec'
-hisfolder1 = '/data/project3/minnaho/swel/tides/mc60/wec/his/mc60_his.*.nc'
+# no tides, no WEC
+sce = 'notidesnowec'
+hisfolder1 = '/data/project3/minnaho/swel/notides/mc60/nowec/his/mc60_his.*.nc'
 
-# tides no wec
+# no tides, 2.5x WEC
+sce = 'ampwec'
+hisfolder4 = '/data/project3/minnaho/swel/notides/mc60/wec/ampwec/everything/mc60_his.*.nc'
+
+# tides, no WEC
 sce = 'tidesnowec'
 hisfolder2 = '/data/project3/minnaho/swel/tides/mc60/nowec/output/his/mc60_his.*.nc'
 
-# no tides no wec
-sce = 'notidesnowec'
-hisfolder3 = '/data/project3/minnaho/swel/notides/mc60/nowec/output/his/mc60_his.*.nc'
-
-# no tides wec
-sce = 'notideswec'
-hisfolder4 = '/data/project3/minnaho/swel/notides/mc60/wec/rerun/his/mc60_his.*.nc'
+# tides, 2.5x WEC
+sce = 'tidesampwec'
+hisfolder3 = '/data/project3/minnaho/swel/tides/mc60/ampwec/everything/mc60_his.*.nc'
 
 hisfiles1 = list(sorted(glob.glob(hisfolder1)))
 hisfiles2 = list(sorted(glob.glob(hisfolder2)))
@@ -71,7 +71,12 @@ for hf in range(len(hisfiles1)):
         dt0 = num2date(his_time,'seconds since 1995-01-01')[t_i]
         time_str = f"{dt0.year}-{dt0.month:02d}-{dt0.day:02d} {dt0.hour:02d}:{dt0.minute:02d}"
 
-        tracer1mask = np.squeeze(hisnc1.variables['rtrace'])[t_i,-1]*masknc # get surface 
+        out_file = savepath+'surf_rtrace-'+str(dt0.year)+'-'+'%02d'%dt0.month+'-'+'%02d'%dt0.day+'-'+'%02d'%dt0.hour+'.png'
+        if os.path.exists(out_file):
+            print(f'  skipping {out_file}, already exists')
+            continue
+
+        tracer1mask = np.squeeze(hisnc1.variables['rtrace'])[t_i,-1]*masknc # get surface
         tracer2mask = np.squeeze(hisnc2.variables['rtrace'])[t_i,-1]*masknc # get surface 
         tracer3mask = np.squeeze(hisnc3.variables['rtrace'])[t_i,-1]*masknc # get surface 
         tracer4mask = np.squeeze(hisnc4.variables['rtrace'])[t_i,-1]*masknc # get surface 
@@ -107,10 +112,10 @@ for hf in range(len(hisfiles1)):
         ax.flat[3].contour(lon_nc,lat_nc,maskc,colors='k',linewidths=1)
 
         # Removed time_str from the first subplot title
-        ax.flat[0].set_title('WEC, tides',fontsize=axfont)
-        ax.flat[1].set_title('WEC, no tides',fontsize=axfont)
-        ax.flat[2].set_title('no WEC, tides',fontsize=axfont)
-        ax.flat[3].set_title('no WEC, no tides',fontsize=axfont)
+        ax.flat[0].set_title('no tides, no WEC',fontsize=axfont)
+        ax.flat[1].set_title('no tides, 2.5x WEC',fontsize=axfont)
+        ax.flat[2].set_title('tides, no WEC',fontsize=axfont)
+        ax.flat[3].set_title('tides, 2.5x WEC',fontsize=axfont)
 
         for i in range(4):
             ax.flat[i].set_ylim([36.47,37.05]) 
@@ -137,5 +142,5 @@ for hf in range(len(hisfiles1)):
         cb1.set_label(r'log$_{10}$(rtrace)',fontsize=axfont)
         cb1.ax.tick_params(axis='both',which='major',labelsize=axfont)
 
-        plt.savefig(savepath+'surf_rtrace-'+str(dt0.year)+'-'+'%02d'%dt0.month+'-'+'%02d'%dt0.day+'-'+'%02d'%dt0.hour+'.png',bbox_inches='tight')
+        plt.savefig(out_file,bbox_inches='tight')
         plt.close()

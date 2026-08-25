@@ -26,6 +26,12 @@ interpolation along a diagonal grid path. The mid transect (mid) is a direct
 slice at a fixed eta index -- already regular in longitude, so no
 interpolation is needed there.
 
+Layout: 3x2 grid of panels -- panel 1 (top-left) is the base case
+(notidesnowec) RAW time-mean, on the same cmap/range as the matching
+plot_cs_diag_*.py single-variable script; the remaining 5 panels are each
+other scenario's time-mean DIFFERENCED against the base case, as before.
+Two colorbars: one for the raw panel, one shared across the 5 diff panels.
+
 Output: ./figs/cs_diag_avg_diff_<var>_<transect>.png (one per variable per transect)
 Cache:  ./figs/cs_diag_avg_diff_cache_<var>_<scen>_<transect>.npz
 """
@@ -34,11 +40,13 @@ import os
 import sys
 sys.path.append('/data/project3/minnaho/global/')
 import glob
+import math
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator, ScalarFormatter
+from matplotlib.colors import LogNorm
 import cmocean
 
 plt.rcParams.update({'font.size': 14})
@@ -76,23 +84,41 @@ RHO_OFFSET = RHO_REF - 1000.0
 DIFF_CMAP = cmocean.cm.balance
 
 # Per-variable config: subdir (None = scenario root), file stem, the netCDF
-# variable name(s) to sum (TOTC sums three), an additive offset, and the
-# colorbar label for the difference field.
+# variable name(s) to sum (TOTC sums three), an additive offset, the diff
+# colorbar label, and the RAW base-case panel's cmap/range/label -- taken
+# verbatim from the matching single-variable plot_cs_diag_*.py script so
+# panel 1 is directly comparable to those figures.
 VAR_CONFIGS = {
     'w':    dict(subdir=None,  stem='z_mc60_his', vars=['w'],    offset=0.0,
-                 label=r'$\Delta w$ (m s$^{-1}$)'),
+                 label=r'$\Delta w$ (m s$^{-1}$)', diff_cmap=DIFF_CMAP,
+                 raw_cmap=cmocean.cm.balance, raw_vmin=-1.5e-4, raw_vmax=1.5e-4,
+                 raw_norm=None, raw_label=r'w (m s$^{-1}$)'),
     'rho':  dict(subdir=None,  stem='z_mc60_his', vars=['rho'],  offset=RHO_OFFSET,
-                 label=r'$\Delta\,(\rho - 1000)$ (kg m$^{-3}$)'),
+                 label=r'$\Delta\,(\rho - 1000)$ (kg m$^{-3}$)', diff_cmap=DIFF_CMAP,
+                 raw_cmap=cmocean.cm.dense, raw_vmin=24, raw_vmax=26.0,
+                 raw_norm=None, raw_label=r'$\rho - 1000$ (kg m$^{-3}$)'),
     'NO3':  dict(subdir='bgc', stem='z_mc60_bgc', vars=['NO3'],  offset=0.0,
-                 label=r'$\Delta$ NO$_3$ (mmol m$^{-3}$)'),
+                 label=r'$\Delta$ NO$_3$ (mmol m$^{-3}$)', diff_cmap=cmocean.cm.diff,
+                 raw_cmap=cmocean.cm.matter, raw_vmin=0, raw_vmax=25,
+                 raw_norm=None, raw_label=r'NO$_3$ (mmol m$^{-3}$)'),
     'O2':   dict(subdir='bgc', stem='z_mc60_bgc', vars=['O2'],   offset=0.0,
-                 label=r'$\Delta$ O$_2$ (mmol m$^{-3}$)'),
+                 label=r'$\Delta$ O$_2$ (mmol m$^{-3}$)', diff_cmap=cmocean.cm.tarn,
+                 raw_cmap=cmocean.cm.haline, raw_vmin=100, raw_vmax=300,
+                 raw_norm=None, raw_label=r'O$_2$ (mmol m$^{-3}$)'),
     'TOTC': dict(subdir='bgc', stem='z_mc60_bgc', vars=['DIATC', 'DIAZC', 'SPC'], offset=0.0,
-                 label=r'$\Delta$ Total phyto C (mmol C m$^{-3}$)'),
+                 label=r'$\Delta$ Total phyto C (mmol C m$^{-3}$)', diff_cmap=DIFF_CMAP,
+                 raw_cmap=cmocean.cm.algae, raw_vmin=0, raw_vmax=40,
+                 raw_norm=None, raw_label=r'Total phyto C (mmol C m$^{-3}$)'),
     'Akt':  dict(subdir='ak',  stem='z_mc60_his', vars=['Akt'],  offset=0.0,
-                 label=r'$\Delta A_{Kt}$ (m$^2$ s$^{-1}$)'),
+                 label=r'$\Delta K_t$ (m$^2$ s$^{-1}$)', diff_cmap=DIFF_CMAP,
+                 raw_cmap='viridis', raw_vmin=None, raw_vmax=None,
+                 raw_norm=LogNorm(vmin=1e-5, vmax=1e-1),
+                 raw_label=r'$K_t$ (m$^2$ s$^{-1}$)'),
     'Akv':  dict(subdir='ak',  stem='z_mc60_his', vars=['Akv'],  offset=0.0,
-                 label=r'$\Delta A_{Kv}$ (m$^2$ s$^{-1}$)'),
+                 label=r'$\Delta K_v$ (m$^2$ s$^{-1}$)', diff_cmap=DIFF_CMAP,
+                 raw_cmap='viridis', raw_vmin=None, raw_vmax=None,
+                 raw_norm=LogNorm(vmin=1e-5, vmax=1e-1),
+                 raw_label=r'$K_v$ (m$^2$ s$^{-1}$)'),
 }
 
 # Diagonal transect geometry (grid index space) -- same as plot_cs_diag.py / plot_cs_diag_rho.py
@@ -294,7 +320,9 @@ for var_key, cfg in VAR_CONFIGS.items():
         var_mean[scen] = mean_list
 
     # -----------------------------------------------------------------------
-    # Plot: difference from the base case (notidesnowec), one figure per transect
+    # Plot: panel 1 = base case raw, panels 2-6 = diff from base case, one
+    # figure per transect, laid out as a 3x2 grid (or nrows x 2 for however
+    # many scenarios are actually present)
     # -----------------------------------------------------------------------
     diff_scens = [s for s in SCENARIOS_ZSLICE if s != BASE_SCEN and s in var_mean]
     if BASE_SCEN not in var_mean or not diff_scens:
@@ -302,42 +330,84 @@ for var_key, cfg in VAR_CONFIGS.items():
         continue
 
     for ti, tr in enumerate(TRANSECTS):
-        fig, axes = plt.subplots(len(diff_scens), 1, sharex=True,
-                                 figsize=(10, 3 * len(diff_scens)))
-        if len(diff_scens) == 1:
-            axes = [axes]
-
-        diffs = {s: var_mean[s][ti] - var_mean[BASE_SCEN][ti] for s in diff_scens}
-        vmax = np.nanpercentile(
-            np.abs(np.concatenate([d.ravel() for d in diffs.values()])), 98)
+        n_panels = 1 + len(diff_scens)
+        ncols = 2
+        nrows = math.ceil(n_panels / ncols)
+        fig, axes = plt.subplots(nrows, ncols, sharex=True, sharey=True,
+                                 figsize=(14, 4 * nrows))
+        axes_flat = np.atleast_1d(axes).flatten()
+        for ax in axes_flat[n_panels:]:
+            ax.axis('off')
 
         keep = DEPTH_1D >= tr['depth_lim']
-        for ax, scen in zip(axes, diff_scens):
-            pc = ax.pcolormesh(tr['lon'], DEPTH_1D[keep], diffs[scen][keep, :],
-                               cmap=DIFF_CMAP, vmin=-vmax, vmax=vmax, shading='nearest')
-            ax.set_ylim([tr['depth_lim'], 0])
+
+        def _format_ax(ax, row, col):
             if tr.get('xlim') is not None:
                 ax.set_xlim(tr['xlim'])
             if tr.get('xticks') is not None:
                 ax.set_xticks(tr['xticks'])
-            ax.set_ylabel('Depth (m)')
-            ax.set_title(f'{LABELS[scen]}  −  {LABELS[BASE_SCEN]}')
-
+            ax.set_ylim([tr['depth_lim'], 0])
             sf = ScalarFormatter(useOffset=False)
             sf.set_scientific(False)
             ax.xaxis.set_major_formatter(sf)
             if tr.get('xticks') is None:
                 ax.xaxis.set_major_locator(MaxNLocator(5))
+            if col == 0:
+                ax.set_ylabel('Depth (m)')
+            if row == nrows - 1:
+                ax.set_xlabel('Longitude')
+            ax.label_outer()
 
-        axes[-1].set_xlabel('Longitude')
+        # panel 1: base case, raw time-mean
+        ax_raw = axes_flat[0]
+        base_field = var_mean[BASE_SCEN][ti][keep, :]
+        raw_kwargs = (dict(norm=cfg['raw_norm']) if cfg['raw_norm'] is not None
+                     else dict(vmin=cfg['raw_vmin'], vmax=cfg['raw_vmax']))
+        pc_raw = ax_raw.pcolormesh(tr['lon'], DEPTH_1D[keep], base_field,
+                                   cmap=cfg['raw_cmap'], shading='nearest', **raw_kwargs)
+        ax_raw.set_title(LABELS[BASE_SCEN])
+        _format_ax(ax_raw, 0, 0)
+
+        # panels 2-6: diff from base case
+        diffs = {s: var_mean[s][ti] - var_mean[BASE_SCEN][ti] for s in diff_scens}
+        vmax = np.nanpercentile(
+            np.abs(np.concatenate([d.ravel() for d in diffs.values()])), 98)
+
+        pc_diff = None
+        for i, scen in enumerate(diff_scens, start=1):
+            ax = axes_flat[i]
+            row, col = divmod(i, ncols)
+            pc_diff = ax.pcolormesh(tr['lon'], DEPTH_1D[keep], diffs[scen][keep, :],
+                                    cmap=cfg['diff_cmap'], vmin=-vmax, vmax=vmax, shading='nearest')
+            ax.set_title(f'{LABELS[scen]}  −  {LABELS[BASE_SCEN]}')
+            _format_ax(ax, row, col)
+
+        fig.tight_layout()
+        fig.subplots_adjust(hspace=0.3)
         fig.canvas.draw()
-        pos_top = axes[0].get_position()
-        pos_bot = axes[-1].get_position()
-        cax = fig.add_axes([pos_top.x1 + 0.015, pos_bot.y0,
-                            0.012, pos_top.y1 - pos_bot.y0])
-        fig.colorbar(pc, cax=cax, label=cfg['label'])
-        fig.suptitle(f'Time-averaged {var_key} difference from '
-                     f'{LABELS[BASE_SCEN]} — {tr["title"]}', y=0.92)
+
+        # two colorbars: raw (below panel 1 only) + diff (right of the grid).
+        # The raw colorbar sits centered in the actual gap between panel 1
+        # and the panel below it (not a fixed offset), so it can't intrude
+        # into that panel -- a fixed -0.06 offset overlapped it because
+        # tight_layout's natural row gap is only ~0.024 fig-fraction.
+        pos_raw = ax_raw.get_position()
+        below = axes_flat[ncols] if n_panels > ncols else None
+        if below is not None:
+            gap_top, gap_bottom = pos_raw.y0, below.get_position().y1
+            cb_h = min(0.02, (gap_top - gap_bottom) * 0.4)
+            cb_y = gap_bottom + (gap_top - gap_bottom - cb_h) / 2
+        else:
+            cb_h, cb_y = 0.02, pos_raw.y0 - 0.06
+        cax_raw = fig.add_axes([pos_raw.x0, cb_y, pos_raw.width, cb_h])
+        cbar_raw = fig.colorbar(pc_raw, cax=cax_raw, orientation='horizontal', label=cfg['raw_label'])
+        cbar_raw.ax.xaxis.set_label_position('top')
+        cbar_raw.ax.xaxis.set_ticks_position('top')
+
+        pos_tr  = axes_flat[1].get_position()
+        pos_br  = axes_flat[n_panels - 1].get_position()
+        cax_diff = fig.add_axes([pos_tr.x1 + 0.015, pos_br.y0, 0.015, pos_tr.y1 - pos_br.y0])
+        fig.colorbar(pc_diff, cax=cax_diff, label=cfg['label'])
 
         fname = f'{SAVEPATH}cs_diag_avg_diff_{var_key}_{tr["name"]}.png'
         plt.savefig(fname, dpi=800, bbox_inches='tight')

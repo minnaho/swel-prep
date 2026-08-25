@@ -7,6 +7,11 @@ _norm version: the lat×depth spatial display is unchanged (NaN below seafloor
 shows as white, which is correct), but vmin/vmax is computed only from cells
 within DEPTH_YLIM so that deep cells with potentially stronger flux do not
 compress the colour scale for the displayed depth range.
+
+offshore_flux in the npz is already per-unit-area (mmol/m2/s, from -u*C at
+the band edge) -- it is NOT divided by dz*dy_face here (that conversion only
+applies to the total-flux npz written by the _old.py postprocessing scripts,
+which are not used).
 """
 
 import os
@@ -49,10 +54,10 @@ def nice_round_up(x):
 
 
 scenario_rows = [
-    ('tides_wec',     'tides, WEC'),
-    ('notides_wec',   'no tides, WEC'),
-    ('tides_nowec',   'tides, no WEC'),
-    ('notides_nowec', 'no tides, no WEC'),
+    ('notidesnowec',  'no tides, no WEC'),
+    ('tidesnowec',    'tides, no WEC'),
+    ('tidesampwec',   'tides, 2.5x WEC'),
+    ('ampwec',        'no tides, 2.5x WEC'),
 ]
 
 axfont = 16
@@ -70,12 +75,9 @@ else:
     depth = None
     for name, _ in scenario_rows:
         d       = np.load(npz_path(name))
-        flux    = d['offshore_flux']              # (time, n_z, n_valid)  mmol/s
-        dz      = d['dz']                         # (n_z, n_valid)
-        dy      = d['dy_face']                    # (n_valid,)
+        flux    = d['offshore_flux']              # (time, n_z, n_valid)  mmol/m2/s
         depth   = d['depth']                      # (n_z,) negative downward
-        flux_pa = flux / (dz[None, :, :] * dy[None, None, :])   # mmol/m2/s
-        F_mean  = np.nanmean(flux_pa, axis=0)     # (n_z, n_valid) — time mean only
+        F_mean  = np.nanmean(flux, axis=0)        # (n_z, n_valid) — time mean only
         data[name] = dict(F=F_mean, eta=d['eta_idx'], xi=d['xi_idx'])
 
     grdnc    = Dataset(GRD)

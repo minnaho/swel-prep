@@ -59,10 +59,10 @@ def nice_round_up(x):
 
 # Row order matches plot_cs_w_NO3.py
 scenario_rows = [
-    ('tides_wec',     'tides, WEC'),
-    ('notides_wec',   'no tides, WEC'),
-    ('tides_nowec',   'tides, no WEC'),
-    ('notides_nowec', 'no tides, no WEC'),
+    ('tidesampwec',   'tides, 2.5x WEC'),
+    ('ampwec',        'no tides, 2.5x WEC'),
+    ('tidesnowec',    'tides, no WEC'),
+    ('notidesnowec',  'no tides, no WEC'),
 ]
 
 axfont = 16

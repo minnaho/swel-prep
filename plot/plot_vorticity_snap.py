@@ -35,13 +35,21 @@ lon_nc = np.array(grdnc.variables['lon_rho']) - 360
 f_nc   = np.array(grdnc.variables['f'])
 maskc  = np.array(grdnc.variables['mask_rho'])
 
+# Drop the 15-point sponge layer on the northern, western, and southern
+# boundaries (eta=0 is south, eta=-1 is north, xi=0 is west -- confirmed via
+# the grid's lat/lon corners). Eastern boundary is left untouched.
+SPONGE = 15
+lat_nc = lat_nc[SPONGE:-SPONGE, SPONGE:]
+lon_nc = lon_nc[SPONGE:-SPONGE, SPONGE:]
+maskc  = maskc[SPONGE:-SPONGE, SPONGE:]
+
 TARGET_GLOB = 'mc60_his.2019042123*.nc'
 TARGET_HOUR = 7
 
 # (key, label, directory) in the requested panel order: top-left, top-right,
 # bottom-left, bottom-right
 SCENARIOS = [
-    ('notidesnowec', 'no tides, no WEC',   '/data/project3/minnaho/swel/notides/mc60/nowec/output/his'),
+    ('notidesnowec', 'no tides, no WEC',   '/data/project3/minnaho/swel/notides/mc60/nowec/his'),
     ('ampwec',       'no tides, 2.5x WEC', '/data/project3/minnaho/swel/notides/mc60/wec/ampwec/everything'),
     ('tidesnowec',   'tides, no WEC',      '/data/project3/minnaho/swel/tides/mc60/nowec/output/his'),
     ('tidesampwec',  'tides, 2.5x WEC',    '/data/project3/minnaho/swel/tides/mc60/ampwec/everything'),
@@ -91,7 +99,7 @@ for key, label, directory in SCENARIOS:
         surf_vort, dt = surface_vort_at_hour(directory, TARGET_HOUR)
         np.savez(cpath, vort=surf_vort, dt=str(dt))
     print(f'  {label}: matched {dt}')
-    panel_data.append((label, surf_vort))
+    panel_data.append((label, surf_vort[SPONGE:-SPONGE, SPONGE:]))
 
 fig, axes = plt.subplots(2, 2, sharex=True, sharey=True, figsize=[figw, figh])
 

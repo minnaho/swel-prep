@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 # biomass netCDFs
 wecnc = '/data/project3/minnaho/swel/tides/mc60/wec/extract_biomass/mc60_wec_7dayavg.nc'
 nowecnc = '/data/project3/minnaho/swel/tides/mc60/nowec/output/extract_biomass/mc60_nowec_7dayavg.nc'
-notidesnc = '/data/project3/minnaho/swel/notides/mc60/output/extract_biomass/mc60_notides_7dayavg.nc'
+notidesnc = '/data/project3/minnaho/swel/notides/mc60/nowec/extract_biomass/mc60_notides_7dayavg.nc'
 
 wec_ds = Dataset(wecnc, 'r')
 nowec_ds = Dataset(nowecnc, 'r')

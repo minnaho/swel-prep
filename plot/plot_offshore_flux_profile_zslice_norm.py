@@ -12,6 +12,11 @@ at ~100 m caused by ~30 % of coastal-band columns having their seafloor at
 For ptrace/rtrace (DEPTH_YLIM bottom = 50 m) all 1202 columns qualify.
 For NO3 (DEPTH_YLIM bottom = 500 m) ~38 % of columns (the deep shelf/canyon
 ones) qualify — these are the physically relevant locations for deep NO3 flux.
+
+offshore_flux in the npz is already per-unit-area (mmol/m2/s, from -u*C at
+the band edge) -- it is NOT divided by dz*dy_face here (that conversion only
+applies to the total-flux npz written by the _old.py postprocessing scripts,
+which are not used).
 """
 
 import os
@@ -20,7 +25,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-TRACER     = 'rtrace'   # 'rtrace', 'ptrace', or 'NO3'
+TRACER     = 'ptrace'   # 'rtrace', 'ptrace', or 'NO3'
 print(TRACER)
 NPZ_DIR = '../postprocessing'
 CACHE   = f'./figs/offshore_flux_profile_zslice_norm_cache_{TRACER}.npz'
@@ -41,15 +46,15 @@ DEPTH_YLIM = {
     'NO3':    [-500, 0],
 }
 
-scenarios = ['tides_wec', 'tides_nowec', 'notides_nowec', 'notides_wec']
-labels    = {'tides_wec':     'tides + WEC',
-             'tides_nowec':   'tides, no WEC',
-             'notides_nowec': 'no tides, no WEC',
-             'notides_wec':   'no tides + WEC'}
-colors    = {'tides_wec':     'C0',
-             'tides_nowec':   'C1',
-             'notides_nowec': 'C2',
-             'notides_wec':   'C3'}
+scenarios = ['tidesampwec', 'tidesnowec', 'notidesnowec', 'ampwec']
+labels    = {'tidesampwec':   'tides + 2.5x WEC',
+             'tidesnowec':    'tides, no WEC',
+             'notidesnowec':  'no tides, no WEC',
+             'ampwec':        'no tides + 2.5x WEC'}
+colors    = {'tidesampwec':   'C0',
+             'tidesnowec':    'C1',
+             'notidesnowec':  'C2',
+             'ampwec':        'C3'}
 
 if os.path.exists(CACHE):
     print(f'Loading cached arrays from {CACHE}')
@@ -63,18 +68,14 @@ else:
 
     for name in scenarios:
         d       = np.load(npz_path(name))
-        flux    = d['offshore_flux']   # (time, n_z, n_valid)  mmol/s
-        dz      = d['dz']              # (n_z, n_valid)
-        dy      = d['dy_face']         # (n_valid,)
+        flux    = d['offshore_flux']   # (time, n_z, n_valid)  mmol/m2/s
         depth   = d['depth']           # (n_z,) negative downward
         h_edge  = d['h_edge']          # (n_valid,) positive bathymetry at band edge
 
         # Restrict to columns that are wet throughout the full plotted depth
         # range so the spatial sample is constant at every depth level.
-        deep    = h_edge >= max_depth  # (n_valid,) boolean mask
-        flux_pa = flux[:, :, deep] / (dz[None, :, deep] * dy[None, None, deep])
-
-        F_tm   = np.nanmean(flux_pa, axis=0)    # (n_z, n_deep)
+        deep   = h_edge >= max_depth  # (n_valid,) boolean mask
+        F_tm   = np.nanmean(flux[:, :, deep], axis=0)   # (n_z, n_deep)
         F_mean = np.nanmean(F_tm,    axis=1)    # (n_z,) — sample now constant in depth
 
         plot_data[name] = dict(F_mean=F_mean)

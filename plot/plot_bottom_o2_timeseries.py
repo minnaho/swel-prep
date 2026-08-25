@@ -37,10 +37,10 @@ GRD      = 'mc60_grd.nc'
 SAVEPATH = './figs/'
 
 SCENARIOS = {
-    'tideswec':     '/data/project3/minnaho/swel/tides/mc60/wec',
+    #'tideswec':     '/data/project3/minnaho/swel/tides/mc60/wec',
     'tidesnowec':   '/data/project3/minnaho/swel/tides/mc60/nowec/output',
-    'notidesnowec': '/data/project3/minnaho/swel/notides/mc60/nowec/output',
-    'notideswec':   '/data/project3/minnaho/swel/notides/mc60/wec/rerun',
+    'notidesnowec': '/data/project3/minnaho/swel/notides/mc60/nowec',
+    #'notideswec':   '/data/project3/minnaho/swel/notides/mc60/wec/rerun',
     'ampwec':       '/data/project3/minnaho/swel/notides/mc60/wec/ampwec/everything',
     'tidesampwec':  '/data/project3/minnaho/swel/tides/mc60/ampwec/everything',
 }
@@ -182,6 +182,27 @@ for scen in SCENARIOS:
         times, series = compute_series(scen)
         all_series[scen] = (times, series)
         save_cache(scen, times, series)
+
+# ---------------------------------------------------------------------------
+# Constrain every scenario to the shared time window all scenarios have data
+# for. Scenarios don't all start/end at exactly the same ocean_time (a few
+# seconds of jitter at the start; up to ~1 day of difference at the end --
+# e.g. tidesnowec runs a day past notidesnowec/ampwec, and tidesampwec's
+# last file is a known 1-record trailing partial write), so without this a
+# scenario's line could dangle past where the others stop instead of a fair,
+# fully-overlapping comparison.
+# ---------------------------------------------------------------------------
+common_start = max(times[0]  for times, _ in all_series.values())
+common_end   = min(times[-1] for times, _ in all_series.values())
+print(f'common time window: {mdates.num2date(common_start)} to {mdates.num2date(common_end)}')
+
+for scen in SCENARIOS:
+    times, series = all_series[scen]
+    keep = (times >= common_start) & (times <= common_end)
+    if not keep.all():
+        print(f'  [{scen}] trimming {(~keep).sum()}/{len(times)} timestep(s) '
+              f'outside the common window', flush=True)
+    all_series[scen] = (times[keep], {name: arr[keep] for name, arr in series.items()})
 
 # ---------------------------------------------------------------------------
 # Plot — one panel per point, all scenarios overlaid

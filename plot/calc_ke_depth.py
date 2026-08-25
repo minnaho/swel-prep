@@ -23,7 +23,7 @@ grd = '/data/project3/minnaho/project9copy/swel/mc60_grd.nc'
 SCENARIOS = {
     'tideswec':     sorted(glob.glob('/data/project3/minnaho/swel/tides/mc60/wec/his/mc60_his.201904*.nc')),
     'tidesnowec':   sorted(glob.glob('/data/project3/minnaho/swel/tides/mc60/nowec/output/his/mc60_his.201904*.nc')),
-    'notidesnowec': sorted(glob.glob('/data/project3/minnaho/swel/notides/mc60/nowec/output/his/mc60_his.201904*.nc')),
+    'notidesnowec': sorted(glob.glob('/data/project3/minnaho/swel/notides/mc60/nowec/his/mc60_his.201904*.nc')),
     'notideswec':   sorted(glob.glob('/data/project3/minnaho/swel/notides/mc60/wec/rerun/his/mc60_his.201904*.nc')),
     'ampwec':       sorted(glob.glob('/data/project3/minnaho/swel/notides/mc60/wec/ampwec/everything/mc60_his.201904*.nc')),
 }

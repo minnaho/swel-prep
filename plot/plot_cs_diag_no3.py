@@ -34,7 +34,7 @@ import ROMS_depths as depths
 SCENARIOS = {
     'tideswec':     '/data/project3/minnaho/swel/tides/mc60/wec',
     'tidesnowec':   '/data/project3/minnaho/swel/tides/mc60/nowec/output',
-    'notidesnowec': '/data/project3/minnaho/swel/notides/mc60/nowec/output',
+    'notidesnowec': '/data/project3/minnaho/swel/notides/mc60/nowec',
     'notideswec':   '/data/project3/minnaho/swel/notides/mc60/wec/rerun',
     'ampwec':       '/data/project3/minnaho/swel/notides/mc60/wec/ampwec/everything',
     'tidesampwec':  '/data/project3/minnaho/swel/tides/mc60/ampwec/everything',
@@ -61,7 +61,7 @@ RHO_OFFSET = 0.0
 # Isopycnal contour overlay (sigma-t levels)
 RHO_REF_NC  = 1027.4             # ROMS reference density
 ISO_RHO_OFF = RHO_REF_NC - 1000  # = 27.4: stored rho + offset → sigma-t
-ISO_LEVELS  = [24, 24.5, 25, 25.5, 26]
+ISO_LEVELS  = [24, 24.25, 24.5, 24.75, 25, 25.25, 25.5, 25.75, 26]
 
 # Transect geometry (grid index space)
 ETA0       = 271       # transect 0 — starting eta index (coast end)
@@ -232,19 +232,13 @@ for hf in range(n_files):
                 var_t = interp_section(var3d, tr['coords'], tr['mask'])
                 rho_t = interp_section(rho3d, tr['coords'], tr['mask'])
 
-                depth_mean = np.nanmean(zr_t, axis=1)
-                keep       = depth_mean >= tr['depth_lim']
-                zr_plot    = zr_t[keep, :]
-                var_plot   = var_t[keep, :]
-                rho_plot   = rho_t[keep, :]
-
-                pc = ax.pcolormesh(tr['lon'], zr_plot, var_plot,
+                pc = ax.pcolormesh(tr['lon'], zr_t, var_t,
                                    cmap=VAR_CMAP, vmin=VMIN, vmax=VMAX,
                                    shading='nearest')
-                lon_2d = np.tile(tr['lon'], (zr_plot.shape[0], 1))
-                cs = ax.contour(lon_2d, zr_plot, rho_plot, levels=ISO_LEVELS,
+                lon_2d = np.tile(tr['lon'], (zr_t.shape[0], 1))
+                cs = ax.contour(lon_2d, zr_t, rho_t, levels=ISO_LEVELS,
                                 colors='k', linewidths=0.8)
-                ax.clabel(cs, fmt='%.1f', fontsize=9)
+                ax.clabel(cs, fmt='%.2f', fontsize=7)
                 ax.set_ylim([tr['depth_lim'], 0])
                 ax.set_ylabel('Depth (m)')
                 ax.set_title(LABELS[name])

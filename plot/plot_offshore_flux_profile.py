@@ -21,7 +21,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 
-TRACER = 'rtrace'
+TRACER = 'ptrace'
 print(TRACER)
 NPZ_DIR = '../postprocessing'
 NPZ_PREFIX = f'offshore_flux_{TRACER}' if TRACER != 'NO3' else 'offshore_flux'
@@ -42,15 +42,15 @@ DEPTH_YLIM = {
     'NO3':    [-500, 0],
 }
 
-scenarios = ['tides_wec', 'tides_nowec', 'notides_nowec', 'notides_wec']
-labels    = {'tides_wec':     'tides + WEC',
-             'tides_nowec':   'tides, no WEC',
-             'notides_nowec': 'no tides, no WEC',
-             'notides_wec':   'no tides + WEC'}
-colors    = {'tides_wec':     'C0',
-             'tides_nowec':   'C1',
-             'notides_nowec': 'C2',
-             'notides_wec':   'C3'}
+scenarios = ['tidesampwec', 'tidesnowec', 'notidesnowec', 'ampwec']
+labels    = {'tidesampwec':   'tides + 2.5x WEC',
+             'tidesnowec':    'tides, no WEC',
+             'notidesnowec':  'no tides, no WEC',
+             'ampwec':        'no tides + 2.5x WEC'}
+colors    = {'tidesampwec':   'C0',
+             'tidesnowec':    'C1',
+             'notidesnowec':  'C2',
+             'ampwec':        'C3'}
 
 
 

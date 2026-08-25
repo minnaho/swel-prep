@@ -16,7 +16,7 @@ grd = '/data/project3/minnaho/project9copy/swel/mc60_grd.nc'
 # Use glob to grab all relevant history files and sort them chronologically
 tideswec_files = sorted(glob.glob('/data/project3/minnaho/swel/tides/mc60/wec/his/mc60_his.201904*.nc'))
 tidesnowec_files = sorted(glob.glob('/data/project3/minnaho/swel/tides/mc60/nowec/output/his/mc60_his.201904*.nc'))
-notidesnowec_files = sorted(glob.glob('/data/project3/minnaho/swel/notides/mc60/nowec/output/his/mc60_his.201904*.nc'))
+notidesnowec_files = sorted(glob.glob('/data/project3/minnaho/swel/notides/mc60/nowec/his/mc60_his.201904*.nc'))
 
 # Output paths for the calculated spectra
 out_spectra_path = './ke_spectra_comparison.npz'

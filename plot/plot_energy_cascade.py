@@ -48,12 +48,12 @@ FREQ_MARKERS = [
     (f_k1,       'K$_1$',   'gray',   'left'),
     (f_o1,       'O$_1$',   'gray',   'right'),
     (f_m2,       'M$_2$',   'purple', 'left'),
-    (f_m4,       'M$_4$',   'coral',  'left'),
-    (f_m6,       'M$_6$',   'coral',  'left'),
+    (f_m4,       'M$_4$',   'gold',  'left'),
+    (f_m6,       'M$_6$',   'gold',  'left'),
 ]
 
 # 'notidesampwec' is the zslice-dir name for this script's raw-scenario key 'ampwec'
-FIT_SCENARIOS = [('tideswec', 'red'), ('notidesnowec', 'green')]
+FIT_SCENARIOS = [('tideswec', 'darkviolet'), ('notidesnowec', 'olive')]
 
 
 def make_energy_cascade_plot(scen_keys, out_path, title=None):
@@ -76,7 +76,7 @@ def make_energy_cascade_plot(scen_keys, out_path, title=None):
         poly = log_slope(freqs_pos, ke, fit_mask)
         fit  = (10 ** poly[1]) * (freqs_pos ** poly[0])
         ax.loglog(freqs_pos[fit_mask], fit[fit_mask], color=color, linewidth=2,
-                  linestyle='-.', label=f'{scen} slope: {poly[0]:.2f}')
+                  linestyle='-.', label=f'slope: {poly[0]:.2f}')
 
     trans = ax.get_xaxis_transform()
     for fval, label, color, ha in FREQ_MARKERS:

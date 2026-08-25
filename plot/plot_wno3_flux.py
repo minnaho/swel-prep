@@ -9,7 +9,7 @@ import matplotlib.gridspec as gridspec
 import pyfuncs as pf
 import scenario_style as ss
 
-SCENARIOS = ['tides_wec', 'tides_nowec', 'notides_nowec', 'notides_wec']
+SCENARIOS = ['notidesnowec', 'ampwec', 'tidesnowec', 'tidesampwec']
 
 labels  = {n: ss.label(n) for n in SCENARIOS}
 colors  = {n: ss.color(n) for n in SCENARIOS}
@@ -32,8 +32,18 @@ TRACERS = {
         scale_ts  = 1.0,
         scale_pdf = 1.0,
         units    = r'mmol N m$^{-2}$ s$^{-1}$',
-        math     = r"$w'NO_3'$",
+        math     = r"$w'NO_3'$ (10 m)",
         outfile  = './figs/wno3_flux.png',
+    ),
+    'NO3_20m': dict(
+        ts_npz   = lambda n: f'../postprocessing/wno3_flux_20m_{n}.npz',
+        ts_key   = 'time_series',
+        env_npz  = lambda n: f'../postprocessing/wno3_env_20m_{n}.npz',
+        scale_ts  = 1.0,
+        scale_pdf = 1.0,
+        units    = r'mmol N m$^{-2}$ s$^{-1}$',
+        math     = r"$w'NO_3'$ (20 m)",
+        outfile  = './figs/wno3_flux_20m.png',
     ),
     'ptrace': dict(
         ts_npz   = lambda n: f'../postprocessing/wptrace_env_{n}.npz',
@@ -42,8 +52,18 @@ TRACERS = {
         scale_ts  = 1e5,
         scale_pdf = 1e7,
         units    = r'mmol m$^{-2}$ s$^{-1}$',
-        math     = r"$w'ptrace'$",
+        math     = r"$w'ptrace'$ (10 m)",
         outfile  = './figs/wptrace_flux.png',
+    ),
+    'ptrace_20m': dict(
+        ts_npz   = lambda n: f'../postprocessing/wptrace_env_20m_{n}.npz',
+        ts_key   = 'ts_mean',
+        env_npz  = lambda n: f'../postprocessing/wptrace_env_20m_{n}.npz',
+        scale_ts  = 1e5,
+        scale_pdf = 1e7,
+        units    = r'mmol m$^{-2}$ s$^{-1}$',
+        math     = r"$w'ptrace'$ (20 m)",
+        outfile  = './figs/wptrace_flux_20m.png',
     ),
     'rtrace': dict(
         ts_npz   = lambda n: f'../postprocessing/wrtrace_env_{n}.npz',
@@ -52,8 +72,18 @@ TRACERS = {
         scale_ts  = 1e5,
         scale_pdf = 1e7,
         units    = r'mmol m$^{-2}$ s$^{-1}$',
-        math     = r"$w'rtrace'$",
+        math     = r"$w'rtrace'$ (10 m)",
         outfile  = './figs/wrtrace_flux.png',
+    ),
+    'rtrace_20m': dict(
+        ts_npz   = lambda n: f'../postprocessing/wrtrace_env_20m_{n}.npz',
+        ts_key   = 'ts_mean',
+        env_npz  = lambda n: f'../postprocessing/wrtrace_env_20m_{n}.npz',
+        scale_ts  = 1e5,
+        scale_pdf = 1e7,
+        units    = r'mmol m$^{-2}$ s$^{-1}$',
+        math     = r"$w'rtrace'$ (20 m)",
+        outfile  = './figs/wrtrace_flux_20m.png',
     ),
 }
 
@@ -91,11 +121,14 @@ for tracer, cfg in TRACERS.items():
         lbl   = labels[name]
         clr   = colors[name]
         ls    = lstyles[name]
+        lw_ts  = ss.lw(name, base_lw=1.5)
+        lw_env = ss.lw(name, base_lw=1.2)
+        lw_pdf = ss.lw(name, base_lw=1.5)
 
         # time series — skip first 12 steps (spin-up / notides_wec artifact)
         ts    = d_ts[cfg['ts_key']][12:] * sc
         times = pf.numdate(d_ts['ocean_times'][12:], 'seconds since 1995-01-01')
-        ax_ts.plot(times, ts, color=clr, linestyle=ls, linewidth=1.5, label=lbl)
+        ax_ts.plot(times, ts, color=clr, linestyle=ls, linewidth=lw_ts, label=lbl)
         ts_data[name] = ts
 
         # envelope
@@ -103,13 +136,13 @@ for tracer, cfg in TRACERS.items():
         ts_min  = d_env['ts_min'][12:] * sc
         ts_max  = d_env['ts_max'][12:] * sc
         ax_env.fill_between(t_env, ts_min, ts_max, color=clr, alpha=0.1, linewidth=0)
-        ax_env.plot(t_env, ts_max, color=clr, linestyle=ls, linewidth=1.2, label=lbl)
-        ax_env.plot(t_env, ts_min, color=clr, linestyle=ls, linewidth=1.2)
+        ax_env.plot(t_env, ts_max, color=clr, linestyle=ls, linewidth=lw_env, label=lbl)
+        ax_env.plot(t_env, ts_min, color=clr, linestyle=ls, linewidth=lw_env)
 
         # PDF — peak normalization
         pdf_norm = d_env['pdf'] / np.max(d_env['pdf'])
         ax_pdf.plot(d_env['bin_centers'] * scp, pdf_norm,
-                    color=clr, linestyle=ls, linewidth=1.5, label=lbl)
+                    color=clr, linestyle=ls, linewidth=lw_pdf, label=lbl)
 
     # box and whisker
     short_labels = [labels[n].replace(', ', '\n') for n in SCENARIOS]

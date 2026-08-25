@@ -37,7 +37,7 @@ import ROMS_depths as depths
 SCENARIOS = {
     'tideswec':     '/data/project3/minnaho/swel/tides/mc60/wec',
     'tidesnowec':   '/data/project3/minnaho/swel/tides/mc60/nowec/output',
-    'notidesnowec': '/data/project3/minnaho/swel/notides/mc60/nowec/output',
+    'notidesnowec': '/data/project3/minnaho/swel/notides/mc60/nowec',
     'notideswec':   '/data/project3/minnaho/swel/notides/mc60/wec/rerun',
     'ampwec':       '/data/project3/minnaho/swel/notides/mc60/wec/ampwec/everything',
     'tidesampwec':  '/data/project3/minnaho/swel/tides/mc60/ampwec/everything',
@@ -57,7 +57,7 @@ VAR_SRC  = 'his'       # 'his' or 'bgc'
 VAR_CMAP = 'viridis'
 VMIN     = 1e-5
 VMAX     = 1e-1
-VAR_LABEL = r'A$_{Kv}$ (m$^2$ s$^{-1}$)'
+VAR_LABEL = r'$K_v$ (m$^2$ s$^{-1}$)'
 VAR_NORM  = LogNorm(vmin=VMIN, vmax=VMAX)
 
 # Transect geometry (grid index space)
@@ -227,12 +227,7 @@ for hf in range(n_files):
                 zw_t  = interp_section(zw3d,  tr['coords'], tr['mask'])
                 var_t = interp_section(var3d, tr['coords'], tr['mask'])
 
-                depth_mean = np.nanmean(zw_t, axis=1)
-                keep       = depth_mean >= tr['depth_lim']
-                zw_plot    = zw_t[keep, :]
-                var_plot   = var_t[keep, :]
-
-                pc = ax.pcolormesh(tr['lon'], zw_plot, var_plot,
+                pc = ax.pcolormesh(tr['lon'], zw_t, var_t,
                                    cmap=VAR_CMAP, norm=VAR_NORM,
                                    shading='nearest')
                 ax.set_ylim([tr['depth_lim'], 0])

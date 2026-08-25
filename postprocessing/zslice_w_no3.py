@@ -11,8 +11,8 @@ folders = [
     ('/data/project3/minnaho/swel/tides/mc60/wec/bgc',           'NO3'),
     ('/data/project3/minnaho/swel/tides/mc60/nowec/output/his',  'w'),
     ('/data/project3/minnaho/swel/tides/mc60/nowec/output/bgc',  'NO3'),
-    ('/data/project3/minnaho/swel/notides/mc60/nowec/output/his','w'),
-    ('/data/project3/minnaho/swel/notides/mc60/nowec/output/bgc','NO3'),
+    ('/data/project3/minnaho/swel/notides/mc60/nowec/his','w'),
+    ('/data/project3/minnaho/swel/notides/mc60/nowec/bgc','NO3'),
     ('/data/project3/minnaho/swel/notides/mc60/wec/rerun/his',  'w'),
     ('/data/project3/minnaho/swel/notides/mc60/wec/rerun/bgc',  'NO3'),
 ]

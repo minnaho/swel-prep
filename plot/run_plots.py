@@ -41,6 +41,10 @@ SCRIPTS: Dict[str, Tuple[str, str]] = {
         "spectral",
         "Compute KE spectra from surface velocity; writes ke_spectra_comparison.npz",
     ),
+    "calc_ke_surf_20190421_20190423": (
+        "spectral",
+        "Compute KE spectra from surface velocity, 2019-04-21 00:00-04-23 00:00 window only",
+    ),
     "calc_ke_bot": (
         "spectral",
         "Compute KE spectra from bottom velocity",
@@ -66,6 +70,10 @@ SCRIPTS: Dict[str, Tuple[str, str]] = {
     "plot_energy_cascade": (
         "pdf",
         "Total-domain KE cascade with log-log slope fits",
+    ),
+    "plot_energy_cascade_20190421_20190423": (
+        "pdf",
+        "Total-domain KE cascade with slope fits, 2019-04-21 00:00-04-23 00:00 window only",
     ),
     "plot_energy_cascade_coastal": (
         "pdf",
@@ -103,9 +111,29 @@ SCRIPTS: Dict[str, Tuple[str, str]] = {
         "pdf",
         "Depth profiles of all zsliced vars; full domain vs coastal mask, all 4 scenarios overlaid",
     ),
+    "plot_profile_zslice_100m": (
+        "pdf",
+        "Depth profiles of all zsliced vars, h<=100m domain only, all 6 scenarios + diff from notidesnowec",
+    ),
+    "plot_profile_zslice_100m_coastal": (
+        "pdf",
+        "Depth profiles of all zsliced vars, h<=100m / coastal (10km) / diff panels, all 6 scenarios",
+    ),
+    "plot_profile_zslice_shelf_offshore": (
+        "pdf",
+        "Depth profiles of all zsliced vars, 4 panels: h<=100m / diff / h>100m / diff, all 6 scenarios",
+    ),
+    "plot_profile_zslice_shelf_offshore_4": (
+        "pdf",
+        "Depth profiles of all zsliced vars, 4 panels: h<=100m / diff / h>100m / diff, notidesnowec/tidesnowec/notidesampwec/tidesampwec only",
+    ),
     "plot_profile_drhodz_100m": (
         "pdf",
         "d(rho)/dz depth profile, h<=100m domain mean, all scenarios + diff from notidesnowec",
+    ),
+    "plot_profile_drhodz_coastal": (
+        "pdf",
+        "d(rho)/dz depth profile, coastal (10km) domain mean, all scenarios + diff from notidesnowec",
     ),
 
     # --- Map / static plots ---
@@ -129,6 +157,34 @@ SCRIPTS: Dict[str, Tuple[str, str]] = {
         "map",
         "Nested-domain extent map (sfshelf60 + mc60 grids)",
     ),
+    "plot_map_w_rms_pycnocline": (
+        "map",
+        "Sub-pycnocline w RMS (all scenarios) and RMSE vs notidesnowec maps",
+    ),
+    "plot_bl_depth": (
+        "map",
+        "Time-mean surface/bottom boundary layer depth maps (Akt > 1e-4 criterion, all scenarios)",
+    ),
+    "plot_w_rmse_wec_shelf_std": (
+        "pdf",
+        "Shelf RMSE(depth) of w vs notidesnowec, with Delta-std overlay",
+    ),
+    "plot_w_rmse_wec_offshore_std": (
+        "pdf",
+        "Offshore RMSE(depth) of w vs notidesnowec, with Delta-std overlay",
+    ),
+    "plot_vort_rmse_wec_shelf_std": (
+        "pdf",
+        "Shelf RMSE(depth) of zeta/f vs notidesnowec, with Delta-std overlay",
+    ),
+    "plot_vort_rmse_wec_offshore_std": (
+        "pdf",
+        "Offshore RMSE(depth) of zeta/f vs notidesnowec, with Delta-std overlay",
+    ),
+    "plot_rmse_std_grid": (
+        "pdf",
+        "2x4 grid of w/vort/dudz/drhodz RMSE+Delta-std profiles (shelf/offshore) in one figure",
+    ),
 
     # --- Snapshot / time-loop plots (loop over all history files, slow) ---
     "plot_cs_surf": (
@@ -146,6 +202,14 @@ SCRIPTS: Dict[str, Tuple[str, str]] = {
     "plot_surf_rtrace": (
         "snapshot",
         "1×3 surface rtrace panels for 3 scenarios",
+    ),
+    "plot_surf_rtrace_ptrace_zslice": (
+        "snapshot",
+        "2×2 zsliced-surface (depth=0m) rtrace+ptrace panels, 4 scenarios",
+    ),
+    "plot_surf_no3_phytoc_zslice": (
+        "snapshot",
+        "2×2 zsliced-surface (depth=0m) NO3+phytoC panels, 4 scenarios",
     ),
     "plot_surf_3ptrace": (
         "snapshot",

@@ -33,7 +33,7 @@ import ROMS_depths as depths
 SCENARIOS = {
     'tideswec':     '/data/project3/minnaho/swel/tides/mc60/wec',
     'tidesnowec':   '/data/project3/minnaho/swel/tides/mc60/nowec/output',
-    'notidesnowec': '/data/project3/minnaho/swel/notides/mc60/nowec/output',
+    'notidesnowec': '/data/project3/minnaho/swel/notides/mc60/nowec',
     'notideswec':   '/data/project3/minnaho/swel/notides/mc60/wec/rerun',
     'ampwec':       '/data/project3/minnaho/swel/notides/mc60/wec/ampwec/everything',
     'tidesampwec':  '/data/project3/minnaho/swel/tides/mc60/ampwec/everything',
@@ -58,7 +58,7 @@ VAR_LABEL = r'w (m s$^{-1}$)'
 # Isopycnal contour overlay (sigma-t levels)
 RHO_REF_NC  = 1027.4             # ROMS reference density
 ISO_RHO_OFF = RHO_REF_NC - 1000  # = 27.4: stored rho + offset → sigma-t
-ISO_LEVELS  = [24, 24.5, 25, 25.5, 26]
+ISO_LEVELS  = [24, 24.25, 24.5, 24.75, 25, 25.25, 25.5, 25.75, 26]
 
 # Transect geometry (grid index space)
 ETA0       = 271       # transect 0 — starting eta index (coast end)
@@ -71,6 +71,12 @@ SLOPE1     = 0.6       # transect 1 — deta/dxi
 DEPTH_LIM1 = -90      # transect 1 — y-axis bottom (m)
 LENGTH_XI = 250        # transect length in xi cells (both)
 N_PTS     = 300        # interpolation resolution along transect (both)
+
+# Mid transect geometry -- same as plot_cs_mid_o2.py / plot_cs_w_NO3.py
+ETA_MID       = 477                 # fixed eta index — inside the bay to offshore
+DEPTH_LIM_MID = -300                # y-axis bottom (m)
+MID_XLIM      = [-121.96, -121.8]   # longitude window
+MID_XTICKS    = np.linspace(MID_XLIM[0], MID_XLIM[1], 5)
 
 GRD      = 'mc60_grd.nc'
 SAVEPATH = './figs/snapshots/'
@@ -95,6 +101,7 @@ def build_transect(eta0, xi0, slope, depth_lim):
     eta = np.linspace(eta0, eta0 + slope * (-LENGTH_XI), N_PTS)
     crd = np.array([eta, xi])
     return dict(
+        mode      = 'diag',
         coords    = crd,
         lon       = map_coordinates(lon, crd, order=1, mode='nearest'),
         lat       = map_coordinates(lat, crd, order=1, mode='nearest'),
@@ -104,25 +111,46 @@ def build_transect(eta0, xi0, slope, depth_lim):
         eta0=eta0, xi0=xi0, slope=slope,
     )
 
+
+def build_mid_transect(eta_slice, depth_lim, xlim=None, xticks=None):
+    """Geographical cross-section at a fixed eta index -- a direct row slice,
+    already regular in longitude, so no interpolation is needed."""
+    lon_row = lon[eta_slice, :]
+    return dict(
+        mode      = 'mid',
+        eta_slice = eta_slice,
+        lon       = lon_row,
+        depth_lim = depth_lim,
+        xlim      = xlim,
+        xticks    = xticks,
+    )
+
 TRANSECTS = [
     build_transect(ETA0, XI0, SLOPE,  DEPTH_LIM0),
     build_transect(ETA1, XI1, SLOPE1, DEPTH_LIM1),
+    build_mid_transect(ETA_MID, DEPTH_LIM_MID, xlim=MID_XLIM, xticks=MID_XTICKS),
 ]
-TRANSECT_NAMES = ['ts', 'tn']   # ts = south transect (ETA0), tn = north transect (ETA1)
+TRANSECT_NAMES = ['ts', 'tn', 'mid']   # ts = south, tn = north, mid = fixed-eta bay-to-offshore
 
 # ---------------------------------------------------------------------------
 # Transect preview — press Enter to proceed, Esc to cancel
 # ---------------------------------------------------------------------------
 def _preview_transect():
     confirmed = [False]
-    colors = ['red', 'blue']
+    colors = ['red', 'blue', 'green']
 
     fig, ax = plt.subplots(figsize=(9, 7))
     ax.pcolormesh(lon, lat, mask_rho, cmap='gray_r', vmin=0, vmax=1)
     for i, tr in enumerate(TRANSECTS):
-        lbl = f't{i}  (η={tr["eta0"]}, ξ={tr["xi0"]}, slope={tr["slope"]})'
-        ax.plot(tr['lon'], tr['lat'], '-', color=colors[i], linewidth=2, label=lbl)
-        ax.plot(tr['lon'][0], tr['lat'][0], 'o', color=colors[i], markersize=7)
+        if tr['mode'] == 'mid':
+            lat_row = lat[tr['eta_slice'], :]
+            lbl = f'mid  (eta={tr["eta_slice"]}, fixed-eta slice)'
+            ax.plot(tr['lon'], lat_row, '-', color=colors[i], linewidth=2, label=lbl)
+            ax.plot(tr['lon'][0], lat_row[0], 'o', color=colors[i], markersize=7)
+        else:
+            lbl = f't{i}  (η={tr["eta0"]}, ξ={tr["xi0"]}, slope={tr["slope"]})'
+            ax.plot(tr['lon'], tr['lat'], '-', color=colors[i], linewidth=2, label=lbl)
+            ax.plot(tr['lon'][0], tr['lat'][0], 'o', color=colors[i], markersize=7)
     ax.set_title(
         f'Transect preview — L={LENGTH_XI} cells\n'
         'Press  Enter  to proceed  |  Esc  to cancel'
@@ -169,6 +197,16 @@ def interp_section(field3d, coords, mask_t):
     for iz in range(n_s):
         out[iz] = interp_transect(field3d[iz], coords, mask_t)
     return out
+
+
+def extract_section(field3d, tr):
+    """Extract a (s_rho, n_pts) cross-section for either transect mode.
+    field3d is already land-masked (NaN on land), so the mid transect's
+    direct row slice needs no additional masking."""
+    if tr['mode'] == 'diag':
+        return interp_section(field3d, tr['coords'], tr['mask'])
+    else:   # 'mid'
+        return field3d[:, tr['eta_slice'], :]
 
 # ---------------------------------------------------------------------------
 # Build per-scenario file lists (handles flat vs his/ subdir layout)
@@ -225,23 +263,17 @@ for hf in range(n_files):
 
             for ax, name in zip(axes, SCENARIOS):
                 zr3d, var3d, rho3d = scen_data[name]
-                zr_t  = interp_section(zr3d,  tr['coords'], tr['mask'])
-                var_t = interp_section(var3d, tr['coords'], tr['mask'])
-                rho_t = interp_section(rho3d, tr['coords'], tr['mask'])
+                zr_t  = extract_section(zr3d,  tr)
+                var_t = extract_section(var3d, tr)
+                rho_t = extract_section(rho3d, tr)
 
-                depth_mean = np.nanmean(zr_t, axis=1)
-                keep       = depth_mean >= tr['depth_lim']
-                zr_plot    = zr_t[keep, :]
-                var_plot   = var_t[keep, :]
-                rho_plot   = rho_t[keep, :]
-
-                pc = ax.pcolormesh(tr['lon'], zr_plot, var_plot,
+                pc = ax.pcolormesh(tr['lon'], zr_t, var_t,
                                    cmap=VAR_CMAP, vmin=VMIN, vmax=VMAX,
                                    shading='nearest')
-                lon_2d = np.tile(tr['lon'], (zr_plot.shape[0], 1))
-                cs = ax.contour(lon_2d, zr_plot, rho_plot, levels=ISO_LEVELS,
+                lon_2d = np.tile(tr['lon'], (zr_t.shape[0], 1))
+                cs = ax.contour(lon_2d, zr_t, rho_t, levels=ISO_LEVELS,
                                 colors='k', linewidths=0.8)
-                ax.clabel(cs, fmt='%.1f', fontsize=9)
+                ax.clabel(cs, fmt='%.2f', fontsize=7)
                 ax.set_ylim([tr['depth_lim'], 0])
                 ax.set_ylabel('Depth (m)')
                 ax.set_title(LABELS[name])
@@ -249,7 +281,12 @@ for hf in range(n_files):
                 sf = ScalarFormatter(useOffset=False)
                 sf.set_scientific(False)
                 ax.xaxis.set_major_formatter(sf)
-                ax.xaxis.set_major_locator(MaxNLocator(5))
+                if tr.get('xlim') is not None:
+                    ax.set_xlim(tr['xlim'])
+                if tr.get('xticks') is not None:
+                    ax.set_xticks(tr['xticks'])
+                else:
+                    ax.xaxis.set_major_locator(MaxNLocator(5))
 
             axes[-1].set_xlabel('Longitude')
             fig.canvas.draw()

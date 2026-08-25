@@ -2,8 +2,8 @@ import subprocess
 import glob
 import os
 
-inpath = '/data/project3/minnaho/swel/notides/mc60/output/bgc/'
-outpath = '/data/project3/minnaho/swel/notides/mc60/output/extract_biomass/'
+inpath = '/data/project3/minnaho/swel/notides/mc60/nowec/bgc/'
+outpath = '/data/project3/minnaho/swel/notides/mc60/nowec/extract_biomass/'
 
 files = sorted(glob.glob(inpath + 'mc60_bgc.*.nc'))
 

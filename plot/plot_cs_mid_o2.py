@@ -32,7 +32,7 @@ import ROMS_depths as depths
 SCENARIOS = {
     'tideswec':     '/data/project3/minnaho/swel/tides/mc60/wec',
     'tidesnowec':   '/data/project3/minnaho/swel/tides/mc60/nowec/output',
-    'notidesnowec': '/data/project3/minnaho/swel/notides/mc60/nowec/output',
+    'notidesnowec': '/data/project3/minnaho/swel/notides/mc60/nowec',
     'notideswec':   '/data/project3/minnaho/swel/notides/mc60/wec/rerun',
     'ampwec':       '/data/project3/minnaho/swel/notides/mc60/wec/ampwec/everything',
     'tidesampwec':  '/data/project3/minnaho/swel/tides/mc60/ampwec/everything',
@@ -57,7 +57,7 @@ VAR_LABEL = r'O$_2$ (mmol m$^{-3}$)'
 # Isopycnal contour overlay (sigma-t levels) -- same as plot_cs_diag_o2.py
 RHO_REF_NC  = 1027.4             # ROMS reference density
 ISO_RHO_OFF = RHO_REF_NC - 1000  # = 27.4: stored rho + offset → sigma-t
-ISO_LEVELS  = [24, 24.5, 25, 25.5, 26]
+ISO_LEVELS  = [24, 24.25, 24.5, 24.75, 25, 25.25, 25.5, 25.75, 26]
 
 ETA_SLICE = 477       # eta index — slice from inside the bay to outside
 DEPTH_LIM = -300       # y-axis bottom (m)
@@ -136,7 +136,7 @@ for hf in range(n_files):
             lon_2d = np.tile(lon_slice, (zr2d.shape[0], 1))
             cs = ax.contour(lon_2d, zr2d, rho2d, levels=ISO_LEVELS,
                             colors='k', linewidths=0.8)
-            ax.clabel(cs, fmt='%.1f', fontsize=9)
+            ax.clabel(cs, fmt='%.2f', fontsize=7)
             ax.set_ylim([DEPTH_LIM, 0])
             ax.set_xlim([x_ticks[0], x_ticks[-1]])
             ax.set_xticks(x_ticks)

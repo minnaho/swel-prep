@@ -60,15 +60,20 @@ SUMMED_TRACERS = {
 ZSLICE_ROOT = '/data/project1/minnaho/swel/zslicefull'
 
 scenarios = {
-    'tides_wec':     ('tideswec',
-                      '/data/project3/minnaho/swel/tides/mc60/wec/his'),
-    'tides_nowec':   ('tidesnowec',
-                      '/data/project3/minnaho/swel/tides/mc60/nowec/output/his'),
-    'notides_nowec': ('notidesnowec',
-                      '/data/project3/minnaho/swel/notides/mc60/nowec/output/his'),
-    'notides_wec':   ('notideswec',
-                      '/data/project3/minnaho/swel/notides/mc60/wec/rerun/his'),
+    'notidesnowec': ('notidesnowec',
+                     '/data/project3/minnaho/swel/notides/mc60/nowec/his'),
+    'ampwec':       ('notidesampwec',
+                     '/data/project3/minnaho/swel/notides/mc60/wec/ampwec/everything'),
+    'tidesnowec':   ('tidesnowec',
+                     '/data/project3/minnaho/swel/tides/mc60/nowec/output/his'),
+    'tidesampwec':  ('tidesampwec',
+                     '/data/project3/minnaho/swel/tides/mc60/ampwec/everything'),
 }
+
+# tidesampwec's raw source has a trailing 1-timestep file
+# (...20190429110056) whose zslice output has no time dimension at all --
+# same exclusion as calc_wtrace_flux.py / plot_cs_diag_avg_diff.py
+TIDESAMPWEC_EXCLUDE = ('20190429110056',)
 
 # --- coastal band western edge ---
 mask = np.array(Dataset(MASK_FILE)['coastal_mask'])
@@ -128,8 +133,10 @@ def compute_flux(zslice_dir, his_dir):
         dz             : (n_z, n_valid) m
         ocean_time     : (time,) s
     """
-    bgc_files = sorted(glob.glob(os.path.join(zslice_dir, 'z_mc60_bgc.*.nc')))
+    bgc_files = sorted(glob.glob(os.path.join(zslice_dir, 'bgc', 'z_mc60_bgc.*.nc')))
     his_files = sorted(glob.glob(os.path.join(zslice_dir, 'z_mc60_his.*.nc')))
+    bgc_files = [f for f in bgc_files if not any(x in f for x in TIDESAMPWEC_EXCLUDE)]
+    his_files = [f for f in his_files if not any(x in f for x in TIDESAMPWEC_EXCLUDE)]
     print(f'  {len(bgc_files)} z-sliced bgc files, {len(his_files)} his files')
 
     bgc_map = {os.path.basename(f).replace('z_mc60_bgc.', '').replace('.nc', ''): f

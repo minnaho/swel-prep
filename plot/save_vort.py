@@ -22,8 +22,8 @@ masknc[masknc==0] = np.nan
 maskc = np.array(grdnc.variables['mask_rho'])
 
 
-files1 = '/data/project3/minnaho/swel/notides/mc60/output/his/mc60_his.20190420230116.nc'
-files2 = '/data/project3/minnaho/swel/notides/mc60/output/his/mc60_his.20190421110116.nc'
+files1 = '/data/project3/minnaho/swel/notides/mc60/nowec/his/mc60_his.20190420230116.nc'
+files2 = '/data/project3/minnaho/swel/notides/mc60/nowec/his/mc60_his.20190421110116.nc'
 
 print('calculating urho, vrho')
 wec_urho, wec_vrho = pf.rho_uv_angle(files1,grd,rotate=True)

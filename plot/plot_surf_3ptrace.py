@@ -26,8 +26,8 @@ bgcfolder2 = '/data/project3/minnaho/swel/tides/mc60/nowec/output/bgc/mc60_bgc.*
 
 # no tides no wec
 sce = 'notidesnowec'
-hisfolder3 = '/data/project3/minnaho/swel/notides/mc60/nowec/output/his/mc60_his.*.nc'
-bgcfolder3 = '/data/project3/minnaho/swel/notides/mc60/nowec/output/bgc/mc60_bgc.*.nc'
+hisfolder3 = '/data/project3/minnaho/swel/notides/mc60/nowec/his/mc60_his.*.nc'
+bgcfolder3 = '/data/project3/minnaho/swel/notides/mc60/nowec/bgc/mc60_bgc.*.nc'
 
 hisfiles1 = list(sorted(glob.glob(hisfolder1)))
 hisfiles2 = list(sorted(glob.glob(hisfolder2)))

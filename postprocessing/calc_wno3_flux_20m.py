@@ -12,26 +12,35 @@ grdnc  = Dataset('../mc60_grd.nc', 'r')
 masknc = np.array(grdnc.variables['mask_rho'])
 masknc[masknc == 0] = np.nan
 
-# (zslicefull_scenario_dir, orig_his_dir_for_ocean_time)
+# (zslicefull_scenario_dir, orig_his_dir_for_ocean_time) -- same 4 scenarios
+# as offshore_flux_zslice.py / calc_wtrace_flux.py (swapped from the original
+# tides_wec/notides_wec 1x-WEC pair to the 2.5x-WEC ampwec/tidesampwec pair)
 scenarios = {
-    'tides_wec':     (f'{ZSLICE_ROOT}/tideswec',
-                      '/data/project3/minnaho/swel/tides/mc60/wec/his'),
-    'tides_nowec':   (f'{ZSLICE_ROOT}/tidesnowec',
-                      '/data/project3/minnaho/swel/tides/mc60/nowec/output/his'),
-    'notides_nowec': (f'{ZSLICE_ROOT}/notidesnowec',
-                      '/data/project3/minnaho/swel/notides/mc60/nowec/output/his'),
-    'notides_wec':   (f'{ZSLICE_ROOT}/notideswec',
-                      '/data/project3/minnaho/swel/notides/mc60/wec/rerun/his'),
-    'ampwec':        (f'{ZSLICE_ROOT}/notidesampwec',
-                      '/data/project3/minnaho/swel/notides/mc60/wec/ampwec/everything'),
+    'notidesnowec': (f'{ZSLICE_ROOT}/notidesnowec',
+                     '/data/project3/minnaho/swel/notides/mc60/nowec/his'),
+    'tidesnowec':   (f'{ZSLICE_ROOT}/tidesnowec',
+                     '/data/project3/minnaho/swel/tides/mc60/nowec/output/his'),
+    'ampwec':       (f'{ZSLICE_ROOT}/notidesampwec',
+                     '/data/project3/minnaho/swel/notides/mc60/wec/ampwec/everything'),
+    'tidesampwec':  (f'{ZSLICE_ROOT}/tidesampwec',
+                     '/data/project3/minnaho/swel/tides/mc60/ampwec/everything'),
 }
+
+# tidesampwec's raw source has a trailing 1-timestep file
+# (...20190429110056) whose zslice output has no time dimension at all
+TIDESAMPWEC_EXCLUDE = ('20190429110056',)
 
 
 def get_matched_pairs(zslice_dir):
     """Match z_mc60_his and z_mc60_bgc files by timestamp."""
+    # bgc files live in the scenario's bgc/ subdir, not the zslice root
+    # (same bug already fixed in offshore_flux_zslice.py)
     his_files = sorted(glob.glob(os.path.join(zslice_dir, 'z_mc60_his.*.nc')))
-    bgc_files = [f for f in sorted(glob.glob(os.path.join(zslice_dir, 'z_mc60_bgc.*.nc')))
+    bgc_files = [f for f in sorted(glob.glob(os.path.join(zslice_dir, 'bgc', 'z_mc60_bgc.*.nc')))
                  if 'dia_avg' not in f]
+    if os.path.basename(zslice_dir.rstrip('/')) == 'tidesampwec':
+        his_files = [f for f in his_files if not any(x in f for x in TIDESAMPWEC_EXCLUDE)]
+        bgc_files = [f for f in bgc_files if not any(x in f for x in TIDESAMPWEC_EXCLUDE)]
     his_map = {os.path.basename(f).replace('z_mc60_his.', '').replace('.nc', ''): f
                for f in his_files}
     bgc_map = {os.path.basename(f).replace('z_mc60_bgc.', '').replace('.nc', ''): f
@@ -84,6 +93,9 @@ def compute_flux(zslice_dir, orig_his_dir):
     mean_w   = np.nanmean(w_all,   axis=0)
     mean_no3 = np.nanmean(no3_all, axis=0)
     flux     = (w_all - mean_w) * (no3_all - mean_no3)
+    # raw (no mean removal) product, for comparison against the parent
+    # smode200 solution's raw w*NO3 panel (plot_smode_wno3_20m.py)
+    raw_time_series = np.nanmean(w_all * no3_all, axis=(1, 2))
     del w_all, no3_all
 
     time_series = np.nanmean(flux, axis=(1, 2))
@@ -95,11 +107,12 @@ def compute_flux(zslice_dir, orig_his_dir):
     bin_centers = 0.5 * (edges[:-1] + edges[1:])
 
     return dict(
-        time_series = time_series,
-        ocean_times = ocean_times,
-        bin_centers = bin_centers,
-        pdf         = counts,
-        mean_flux   = float(np.nanmean(all_flux)),
+        time_series     = time_series,
+        raw_time_series = raw_time_series,
+        ocean_times     = ocean_times,
+        bin_centers     = bin_centers,
+        pdf             = counts,
+        mean_flux       = float(np.nanmean(all_flux)),
     )
 
 

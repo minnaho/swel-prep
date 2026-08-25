@@ -9,6 +9,11 @@ the spatial sample constant at every depth level and removing the ~100 m
 artifact caused by ~30 % of columns having h_edge ≈ 90–105 m and dropping
 out of the mean partway through the plotted range.  vmin/vmax is also
 restricted to within DEPTH_YLIM so deep cells do not compress the colour scale.
+
+offshore_flux in the npz is already per-unit-area (mmol/m2/s, from -u*C at
+the band edge) -- it is NOT divided by dz*dy_face here (that conversion only
+applies to the total-flux npz written by the _old.py postprocessing scripts,
+which are not used).
 """
 
 import os
@@ -23,7 +28,7 @@ import matplotlib.dates as mdates
 from matplotlib.ticker import FuncFormatter
 import cmocean
 
-TRACER     = 'rtrace'   # 'rtrace', 'ptrace', or 'NO3'
+TRACER     = 'ptrace'   # 'rtrace', 'ptrace', or 'NO3'
 print(TRACER)
 NPZ_DIR = '../postprocessing'
 CACHE   = f'./figs/offshore_flux_hov_time_zslice_norm_cache_{TRACER}.npz'
@@ -53,10 +58,10 @@ def nice_round_up(x):
 
 
 scenario_rows = [
-    ('tides_wec',     'tides, WEC'),
-    ('notides_wec',   'no tides, WEC'),
-    ('tides_nowec',   'tides, no WEC'),
-    ('notides_nowec', 'no tides, no WEC'),
+    ('tidesampwec',   'tides, 2.5x WEC'),
+    ('ampwec',        'no tides, 2.5x WEC'),
+    ('tidesnowec',    'tides, no WEC'),
+    ('notidesnowec',  'no tides, no WEC'),
 ]
 
 axfont = 16
@@ -76,9 +81,7 @@ else:
     depth = None
     for name, _ in scenario_rows:
         d       = np.load(npz_path(name))
-        flux    = d['offshore_flux']              # (time, n_z, n_valid)  mmol/s
-        dz      = d['dz']                         # (n_z, n_valid)
-        dy      = d['dy_face']                    # (n_valid,)
+        flux    = d['offshore_flux']              # (time, n_z, n_valid)  mmol/m2/s
         depth   = d['depth']                      # (n_z,) negative downward
         h_edge  = d['h_edge']                     # (n_valid,) positive bathymetry at band edge
 
@@ -86,11 +89,10 @@ else:
         # the spatial sample is constant at every depth level, removing the
         # ~100 m artifact from columns with h_edge ≈ 90–105 m dropping out.
         deep    = h_edge >= max_depth
-        flux_pa = flux[:, :, deep] / (dz[None, :, deep] * dy[None, None, deep])
 
         # Collapse alongshore with consistent sample — nanmean is now safe since
         # all selected columns are wet throughout the depth range.
-        F_td    = np.nanmean(flux_pa, axis=2)                    # (time, n_z)
+        F_td    = np.nanmean(flux[:, :, deep], axis=2)           # (time, n_z)
 
         times   = pf.numdate(d['ocean_time'], 'seconds since 1995-01-01')
         data[name] = dict(F=F_td, t_num=mdates.date2num(times))

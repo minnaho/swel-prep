@@ -55,8 +55,8 @@ All multi-scenario scripts reference four ROMS runs in this order:
 |----------------|-------|-----|-----------|
 | `tideswec`     | yes   | yes | `/data/project3/minnaho/swel/tides/mc60/wec/` |
 | `tidesnowec`   | yes   | no  | `/data/project3/minnaho/swel/tides/mc60/nowec/output/` |
-| `notidesnowec` | no    | no  | `/data/project3/minnaho/swel/notides/mc60/nowec/output/` |
-| `notideswec`   | no    | yes | `/data/project3/minnaho/swel/notides/mc60/wec/output/` |
+| `notidesnowec` | no    | no  | `/data/project3/minnaho/swel/notides/mc60/nowec/` |
+| `notideswec`   | no    | yes | `/data/project3/minnaho/swel/notides/mc60/wec/rerun/` |
 
 History files follow the glob pattern: `<scenario_dir>/his/mc60_his.*.nc`
 
@@ -134,3 +134,15 @@ usage: run_plots.py [-h]
 - All scripts assume they are run from this directory (`swel/plot/`). `run_plots.py` enforces this via `cwd=PLOT_DIR`.
 - Snapshot scripts (`plot_surf_*`, `plot_cs_*`) loop over every history file and can take hours end-to-end. Use `--timeout` if you need a wall-clock guard.
 - `edit_mask.py` opens an interactive matplotlib GUI and cannot be run via `run_plots.py`; launch it directly.
+
+## Standalone analysis scripts (not registered in run_plots.py)
+
+A large batch of one-off/derived scripts have accumulated in `plot/` and `../postprocessing/`, launched directly rather than through `run_plots.py`:
+
+- **WEC/tide RMSE & std diagnostics vs. base case** (~20 scripts, plot+postprocessing): `calc_{w,vort,dudz,drhodz}_rmse_wec_{shelf,offshore}.py` compute RMSE(depth)/RMS(depth)/std(depth) profiles of w, zeta/f, du/dz, and drho/dz against the `notidesnowec` baseline across three comparisons (WEC alone, tides alone, tides+WEC together), testing whether WEC amplifies tidal-bore-driven variability rather than just adding its own signature. `plot_{w,vort}_rmse_wec_{shelf,offshore}[_std].py` render them, with `_std` variants overlaying Δstd to separate "more variable" from "phase-shifted." `plot_rmse_std_grid.py` combines eight of these into one 2×4 labeled figure.
+- **Boundary-layer depth** (2 calc + 1 plot): `calc_bl_depth_{sbl,bbl}.py` diagnose surface/bottom boundary-layer depth via an Akt-threshold criterion (SBL from zsliced Akt, BBL from raw native-grid Akt since the zsliced grid is too coarse below -300m); `plot_bl_depth.py` maps both as 3×2 cartopy grids.
+- **NO3 flux at multiple depths/domains** (~10 calc + ~6 plot): `calc_wno3_flux_{10m,20m,30m}_100m.py`/`_offshore.py`/`_100m_daily.py` compute the resolved eddy flux w'NO3' restricted to shelf, offshore, or daily-decomposed windows; `calc_akt_dno3dz_{20m,30m}_100m.py` compute the parameterized diffusive counterpart. Corresponding `plot_wno3_flux_100m.py`/`_20m_offshore.py`/`_20m_100m_daily.py` render them in the standard 4-panel (time series/envelope/PDF/box) layout.
+- **Shelf-vs-offshore & coastal depth profiles**: `profile_zslice_bgcdia_100m_offshore.py`/`profile_zslice_par_offshore.py` (postprocessing) and `plot_profile_zslice_{100m,100m_coastal,shelf_offshore,shelf_offshore_4}.py`/`plot_profile_zslice_bgcdia_shelf_offshore.py`/`plot_profile_drhodz_coastal.py` (plot) — time/horizontally-averaged depth profiles split by shelf/offshore/coastal domain, for zsliced variables generally and bgcdia limitation/uptake diagnostics specifically.
+- **Single-instant snapshot cross-sections**: `plot_cs_{pv,vorticity,wno3_aktdno3dz}_snap.py` plot PV, normalized vorticity, and w'NO3'/Akt·dNO3/dz at one matched timestep across scenarios.
+- **`boxavg/` subsystem** (13 scripts + `cs_boxavg.py` helper): perpendicular-box-averaged variants of the `plot_cs_*.py` family — averages over a ~1.2 km box straddling each transect line instead of sampling one grid line, on a fixed depth grid via `boxavg_section`/`boxavg_section_fixedz`. Includes `plot_cs_wno3_aktdno3dz_avg_diff_box_3x2.py`, a box+time-averaged 3x2 scenario-diff figure for w'NO3'/-Akt·dNO3/dz.
+- **Misc**: restricted-window KE spectra (`calc_ke_surf_20190421_20190423.py`, `plot_energy_cascade_20190421_20190423.py`); raw-sigma surface snapshot maps (`plot_surf_no3_phytoc_zslice.py`, `plot_surf_rtrace_ptrace_zslice.py`); smode200 parent-vs-child w'NO3' comparisons (`plot_smode_wno3_{10m,20m}.py`); 4-scenario Hovmöller variant; launcher scripts (`run_all_screen.sh`, `run_cs_replots.sh`, `run_ncra_means.sh`, `run_par_only.sh`).

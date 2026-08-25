@@ -37,10 +37,10 @@ TRACER    = 'ptrace'
 OUT_NAME  = 'offshore_flux_ptrace'
 
 scenarios = {
-    'tides_wec':     '/data/project3/minnaho/swel/tides/mc60/wec/his',
-    'tides_nowec':   '/data/project3/minnaho/swel/tides/mc60/nowec/output/his',
-    'notides_nowec': '/data/project3/minnaho/swel/notides/mc60/nowec/output/his',
-    'notides_wec':   '/data/project3/minnaho/swel/notides/mc60/wec/rerun/his',
+    'notidesnowec': '/data/project3/minnaho/swel/notides/mc60/nowec/his',
+    'ampwec':       '/data/project3/minnaho/swel/notides/mc60/wec/ampwec/everything',
+    'tidesnowec':   '/data/project3/minnaho/swel/tides/mc60/nowec/output/his',
+    'tidesampwec':  '/data/project3/minnaho/swel/tides/mc60/ampwec/everything',
 }
 
 # --- offshore (west) edge of the coastal band per eta row ---
@@ -106,9 +106,12 @@ def compute_flux(his_dir):
 
 
 for name, his_dir in scenarios.items():
+    out = f'{OUT_NAME}_{name}.npz'
+    if os.path.exists(out):
+        print(f'Skipping {name} -- {out} already exists')
+        continue
     print(f'Processing {name} ...')
     flux, z_r, ot = compute_flux(his_dir)
-    out = f'{OUT_NAME}_{name}.npz'
     np.savez(out,
              offshore_flux = flux,
              z_r           = z_r,

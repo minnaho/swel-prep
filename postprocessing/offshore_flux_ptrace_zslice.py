@@ -46,15 +46,20 @@ OUT_NAME  = 'offshore_flux_ptrace_zslice'
 ZSLICE_ROOT = '/data/project1/minnaho/swel/zslicefull'
 
 scenarios = {
-    'tides_wec':     ('tideswec',
-                      '/data/project3/minnaho/swel/tides/mc60/wec/his'),
-    'tides_nowec':   ('tidesnowec',
-                      '/data/project3/minnaho/swel/tides/mc60/nowec/output/his'),
-    'notides_nowec': ('notidesnowec',
-                      '/data/project3/minnaho/swel/notides/mc60/nowec/output/his'),
-    'notides_wec':   ('notideswec',
-                      '/data/project3/minnaho/swel/notides/mc60/wec/rerun/his'),
+    'notidesnowec': ('notidesnowec',
+                     '/data/project3/minnaho/swel/notides/mc60/nowec/his'),
+    'ampwec':       ('notidesampwec',
+                     '/data/project3/minnaho/swel/notides/mc60/wec/ampwec/everything'),
+    'tidesnowec':   ('tidesnowec',
+                     '/data/project3/minnaho/swel/tides/mc60/nowec/output/his'),
+    'tidesampwec':  ('tidesampwec',
+                     '/data/project3/minnaho/swel/tides/mc60/ampwec/everything'),
 }
+
+# tidesampwec's raw source has a trailing 1-timestep file
+# (...20190429110056) whose zslice output has no time dimension at all --
+# same exclusion as calc_wtrace_flux.py / plot_cs_diag_avg_diff.py
+TIDESAMPWEC_EXCLUDE = ('20190429110056',)
 
 # --- coastal band western edge ---
 mask = np.array(Dataset(MASK_FILE)['coastal_mask'])
@@ -107,6 +112,7 @@ def compute_dz_2d(depth_vals, h_edge):
 
 def compute_flux(zslice_dir, his_dir):
     z_files = sorted(glob.glob(os.path.join(zslice_dir, 'z_mc60_his.*.nc')))
+    z_files = [zf for zf in z_files if not any(x in zf for x in TIDESAMPWEC_EXCLUDE)]
     print(f'  {len(z_files)} z-sliced files')
 
     with Dataset(z_files[0]) as nc:

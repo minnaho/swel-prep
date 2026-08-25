@@ -10,7 +10,7 @@ b = -1 * depth
 folders = [
     '/data/project3/minnaho/swel/tides/mc60/wec/his',
     '/data/project3/minnaho/swel/tides/mc60/nowec/output/his',
-    '/data/project3/minnaho/swel/notides/mc60/nowec/output/his',
+    '/data/project3/minnaho/swel/notides/mc60/nowec/his',
     '/data/project3/minnaho/swel/notides/mc60/wec/rerun/his',
 ]
 
