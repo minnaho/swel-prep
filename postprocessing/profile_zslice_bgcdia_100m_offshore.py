@@ -13,17 +13,18 @@ dropped, same reasoning as the two split scripts this replaces -- they'd
 otherwise silently re-bin within an already depth-restricted domain.
 
 Usage:
-  # launch all 3 in parallel:
-  for scen in tidesampwec tidesnowec notidesnowec; do
+  # launch all 4 in parallel -- note ampwec's SCENARIOS/zslicefull key is
+  # 'notidesampwec', not 'ampwec' (same run, different naming convention):
+  for scen in tidesampwec tidesnowec notidesnowec notidesampwec; do
     python -u profile_zslice_bgcdia_100m_offshore.py $scen > log_bgcdia_100m_offshore_${scen}.txt 2>&1 &
   done
 
-  # once all 3 are done:
+  # once all 4 are done:
   python -u profile_zslice_bgcdia_100m_offshore.py --merge
 
   # adding a new variable later without re-reading every other variable
   # (merges into the existing per-scenario npz rather than overwriting it):
-  for scen in tidesampwec tidesnowec notidesnowec; do
+  for scen in tidesampwec tidesnowec notidesnowec notidesampwec; do
     python -u profile_zslice_bgcdia_100m_offshore.py $scen --vars PAR > log_bgcdia_PAR_${scen}.txt 2>&1 &
   done
   # then re-run --merge as above
@@ -44,7 +45,7 @@ from netCDF4 import Dataset
 ZSLICE_ROOT       = '/data/project1/minnaho/swel/zslicefull'
 GRD               = '../plot/mc60_grd.nc'
 COASTAL_MASK_FILE = '../plot/coastal_mask.nc'
-SCENARIOS = ['tidesampwec', 'tidesnowec', 'notidesnowec']
+SCENARIOS = ['tidesampwec', 'tidesnowec', 'notidesnowec', 'notidesampwec']
 GROUPS    = ['100m', 'offshore']
 
 DIAT_LIM_VARS    = ['DIAT_N_LIM', 'DIAT_FE_LIM', 'DIAT_PO4_LIM',

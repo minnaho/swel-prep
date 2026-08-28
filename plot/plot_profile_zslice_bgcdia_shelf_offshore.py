@@ -7,10 +7,13 @@ zslice_profiles_bgcdia_offshore.npz (written by
 postprocessing/profile_zslice_bgcdia_100m_offshore.py) from
 ../postprocessing/.
 
-Restricted to the 3 scenarios the bgc_dia_avg rerun covers (tidesampwec,
-tidesnowec, notidesnowec) -- same set as plot_profile_zslice_bgcdia.py, not
-the 4-scenario set plot_profile_zslice_shelf_offshore_4.py uses (bgcdia has
-no ampwec data at all).
+Restricted to the 4 scenarios the bgc_dia_avg rerun covers (tidesampwec,
+tidesnowec, notidesnowec, notidesampwec) -- same set as
+plot_profile_zslice_bgcdia.py. notidesampwec's zsliced bgcdia data comes
+from a later, separate rerun (zslice_dia_avg_rerun.py + a
+profile_zslice_bgcdia_100m_offshore.py notidesampwec pass); the other
+4-scenario script, plot_profile_zslice_shelf_offshore_4.py, isn't restricted
+to bgc_dia_avg's rerun-only variables so it doesn't need this.
 
 No coastal-mask panel here, and no depth-zone (0-50/50-200/200+) breakdown --
 same reasoning as plot_profile_zslice_shelf_offshore_4.py: the new
@@ -51,7 +54,7 @@ LIM_VARS    = DIAT_LIM_VARS + SP_LIM_VARS
 UPTAKE_VARS = DIAT_UPTAKE_VARS + SP_UPTAKE_VARS
 VARS        = LIM_VARS + UPTAKE_VARS + PAR_VARS
 
-SCENARIOS = ['tidesampwec', 'tidesnowec', 'notidesnowec']
+SCENARIOS = ['tidesampwec', 'tidesnowec', 'notidesnowec', 'notidesampwec']
 BASELINE  = 'notidesnowec'
 LABELS  = ss.LABELS
 COLORS  = ss.COLORS

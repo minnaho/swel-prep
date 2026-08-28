@@ -80,6 +80,12 @@ Major analysis families:
   snapshots), `plot_cs_diag_avg_diff.py` / `plot_cs_diag_drhodz_diff.py` (time-averaged,
   differenced against `notidesnowec`, 3 transects: south/north diagonal + a fixed-eta
   "mid" section)
+- **front transects** — `plot_cs_front_transect.py`: per-scenario, user-placed
+  diagonal transects (own geometry per scenario, since the front's location/shape
+  differs by run) at one fixed instant. Per scenario: a locator map (surface temp +
+  all transect lines) plus one cached figure per variable (temp, correctly-rotated
+  ζ/f, NO3, w, Akt, Akv, total phyto C) stacking all of that scenario's transects.
+  Headless by default; `--preview` pops up the old interactive placement window.
 - **KE spectra** — `calc_ke_surf.py`/`_10m.py`/`_50m.py` (complex-velocity FFT power
   spectra by depth) + `plot_energy_cascade*.py`; `calc_ke_horiz_wavenumber.py`/
   `_vert_wavenumber.py` + `plot_ke_wavenumber.py` (Hypolite et al. 2021 convention)

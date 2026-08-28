@@ -5,12 +5,22 @@ DIAT/SP nutrient-limitation and uptake diagnostics from raw mc60_bgc_dia_avg
 files (same variable set as plot_hov_transect_raw_bgcdia.py) instead of a
 single his/bgc variable.
 
-Scenarios: tidesampwec (regular dia/ output), tidesnowec and notidesnowec
-(rerun bgc_dia_avg output only, at dia/rerun_bgcdia/, covering a limited
-rerun date window). Since tidesnowec/notidesnowec only have 4 dia_avg files
-(the rerun window), the plotted time steps are restricted to the filename
-timestamps (YYYYMMDDHHMM prefix) common to all 3 scenarios' dia directories,
-so every panel in a figure shows the same simulated time.
+'_rerun4' variant: every variable, including PAR/TOT_PROD, is restricted to
+the 4-timestep LIM/UPTAKE rerun window (see below) -- this is the original
+behavior. Sibling script plot_cs_diag_bgcdia_box_alltime.py instead plots
+PAR/TOT_PROD across each scenario's full continuous dia_avg record (more
+time steps for tidesampwec/ampwec, but at a non-time-synchronized native
+cadence across scenarios); use that one if you want that extra coverage.
+
+Scenarios: tidesampwec (regular dia/ output); tidesnowec, notidesnowec, and
+ampwec (rerun bgc_dia_avg output only, at dia/rerun_bgcdia/, covering a
+limited rerun date window -- ampwec's continuous everything/ dia_avg output
+lacks the LIM/UPTAKE variables entirely, same reason tidesnowec/notidesnowec
+needed a targeted rerun). Since the rerun scenarios only have 4 dia_avg files
+(the rerun window), the plotted time steps (for every variable, including
+PAR/TOT_PROD) are restricted to the filename timestamps (YYYYMMDDHHMM
+prefix) common to all 4 scenarios' dia directories, so every panel in a
+figure shows the same simulated time.
 
 mc60_bgc_dia_avg files have no zeta/rho, so depths (for the box-average z
 grid) and sigma-t (for the isopycnal contour overlay) are reconstructed by
@@ -18,9 +28,15 @@ pairing each dia_avg file with the regular his/ file sharing the same
 YYYYMMDDHHMM filename prefix, and time-averaging that his file's zeta/rho
 across its own internal time steps (matching the averaging window of the
 dia_avg diagnostic). A scenario/time with no matching his file is skipped.
+Since all 4 scenarios' dia_avg files in this rerun window share the same
+~12h averaging period (confirmed via ocean_time spacing), a console WARNING
+is printed if any scenario's his-based averaging window ever diverges from
+the others' at a given time step -- this shouldn't trigger on the current
+rerun data, but flags it if that ever changes.
 
 Saves one PNG per (variable, transect, time step) — same pattern as
-plot_cs_diag_o2_box.py, just looped over all 18 DIAT/SP LIM + uptake variables.
+plot_cs_diag_o2_box.py, looped over all 18 DIAT/SP LIM + uptake variables
+plus PAR and TOT_PROD (NPP, converted from mmol C m^-3 s^-1 to d^-1).
 
 Output: ./figs/snapshots/cs_diag_bgcdia_box_{var}-<ts|tn>-YYYY-MM-DD-HH.png
 """
@@ -48,18 +64,24 @@ SCENARIOS = {
     'tidesampwec':  '/data/project3/minnaho/swel/tides/mc60/ampwec',
     'tidesnowec':   '/data/project3/minnaho/swel/tides/mc60/nowec/output',
     'notidesnowec': '/data/project3/minnaho/swel/notides/mc60/nowec',
+    'ampwec':       '/data/project3/minnaho/swel/notides/mc60/wec/ampwec',
 }
 LABELS = {
     'tidesampwec':  'tides, amplified WEC',
     'tidesnowec':   'tides, no WEC',
     'notidesnowec': 'no tides, no WEC',
+    'ampwec':       'no tides, amplified WEC',
 }
-# tidesnowec/notidesnowec only reran this date window — rerun bgc_dia_avg
-# output lands in dia/rerun_bgcdia/, not dia/ itself. tidesampwec is a full
-# continuous run, so it uses the default 'dia'.
+# tidesnowec/notidesnowec/ampwec only reran this date window — rerun
+# bgc_dia_avg output lands in dia/rerun_bgcdia/, not dia/ itself. tidesampwec
+# is a full continuous run, so it uses the default 'dia'. ampwec's SCENARIOS
+# path is the base root (his/ + dia/rerun_bgcdia/ live directly under it) --
+# NOT .../ampwec/everything, a separate flat-layout continuous run whose
+# dia_avg files lack the LIM/UPTAKE variables.
 DIA_SRC_SUBDIR = {
     'tidesnowec':   'dia/rerun_bgcdia',
     'notidesnowec': 'dia/rerun_bgcdia',
+    'ampwec':       'dia/rerun_bgcdia',
 }
 
 DIAT_LIM_VARS    = ['DIAT_N_LIM', 'DIAT_FE_LIM', 'DIAT_PO4_LIM',
@@ -69,10 +91,16 @@ SP_LIM_VARS      = ['SP_N_LIM', 'SP_FE_LIM', 'SP_PO4_LIM',
 DIAT_UPTAKE_VARS = ['DIAT_NO3_UPTAKE', 'DIAT_NH4_UPTAKE', 'DIAT_NO2_UPTAKE',
                      'DIAT_SI_UPTAKE']
 SP_UPTAKE_VARS   = ['SP_NO3_UPTAKE', 'SP_NH4_UPTAKE', 'SP_NO2_UPTAKE']
+PROD_VARS        = ['TOT_PROD']
+PAR_VARS         = ['PAR']
 
 LIM_VARS    = DIAT_LIM_VARS + SP_LIM_VARS
 UPTAKE_VARS = DIAT_UPTAKE_VARS + SP_UPTAKE_VARS
-PLOT_VARS   = LIM_VARS + UPTAKE_VARS
+PLOT_VARS   = LIM_VARS + UPTAKE_VARS + PROD_VARS + PAR_VARS
+
+# TOT_PROD is stored as mmol C m^-3 s^-1; convert to d^-1 for readability,
+# matching the convention used by the other TOT_PROD/NPP plot scripts
+VAR_SCALE = {'TOT_PROD': 86400.0}
 
 VAR_LONG_NAME = {
     'DIAT_N_LIM':        'Diatom N limitation',
@@ -93,6 +121,8 @@ VAR_LONG_NAME = {
     'SP_NO3_UPTAKE':     'Small phyto NO3 uptake',
     'SP_NH4_UPTAKE':     'Small phyto NH4 uptake',
     'SP_NO2_UPTAKE':     'Small phyto NO2 uptake',
+    'TOT_PROD':          'NPP',
+    'PAR':               'PAR',
 }
 
 VAR_CONFIGS = {}
@@ -105,6 +135,16 @@ for _v in UPTAKE_VARS:
     VAR_CONFIGS[_v] = dict(
         cmap=cmocean.cm.algae, vmin=None, vmax=None,   # resolved per-file from plotted data
         label=f'{VAR_LONG_NAME[_v]} (mmol m$^{{-2}}$ s$^{{-1}}$)',
+    )
+for _v in PROD_VARS:
+    VAR_CONFIGS[_v] = dict(
+        cmap=cmocean.cm.algae, vmin=None, vmax=None,   # resolved per-file from plotted data
+        label=f'{VAR_LONG_NAME[_v]} (mmol C m$^{{-3}}$ d$^{{-1}}$)',
+    )
+for _v in PAR_VARS:
+    VAR_CONFIGS[_v] = dict(
+        cmap=cmocean.cm.solar, vmin=None, vmax=None,   # resolved per-file from plotted data
+        label='PAR (W m$^{-2}$)',
     )
 
 RHO_OFFSET = 0.0
@@ -160,6 +200,37 @@ def clean(arr):
     arr = np.array(arr)
     return np.where(np.abs(arr) > 1e30, np.nan, arr)
 
+
+def load_scenario_data(dia_f, his_f, vars_to_load):
+    """Load one scenario's dia_avg (+ matched his) fields for a single time
+    step. Returns dict(dt0, zr3d, rho3d, var3d, his_window_hr) -- zr3d/rho3d/
+    his_window_hr are None if his_f is None (no matching his file)."""
+    with Dataset(dia_f, 'r') as dnc:
+        ocean_time = np.array(dnc['ocean_time'][:])
+        dt0 = num2date(ocean_time, 'seconds since 1995-01-01',
+                       only_use_cftime_datetimes=False)[0]
+
+        zr3d = None
+        rho3d = None
+        his_window_hr = None
+        if his_f is not None:
+            with Dataset(his_f, 'r') as hnc:
+                his_time = np.array(hnc['ocean_time'][:])
+                his_window_hr = ((his_time[-1] - his_time[0]) / 3600.0
+                                  if len(his_time) > 1 else 0.0)
+                zeta_mean = np.nanmean(clean(hnc['zeta'][:]), axis=0)
+                rho3d = (np.nanmean(clean(hnc['rho'][:]), axis=0)
+                          + ISO_RHO_OFF) * mask_plot
+            zr3d = depths.get_zr_zeta(dnc, grdnc, zeta_mean)
+
+        var3d = {}
+        for var in vars_to_load:
+            if var in dnc.variables:
+                var3d[var] = clean(dnc[var][0]) * mask_plot * VAR_SCALE.get(var, 1.0)
+
+    return dict(dt0=dt0, zr3d=zr3d, rho3d=rho3d, var3d=var3d,
+                his_window_hr=his_window_hr)
+
 # ---------------------------------------------------------------------------
 # Build per-scenario dia_avg / his file lookups, keyed by YYYYMMDDHHMM prefix
 # ---------------------------------------------------------------------------
@@ -193,35 +264,35 @@ os.makedirs(SAVEPATH, exist_ok=True)
 for prefix in common_prefixes:
     scen_data = {}
     dt0 = None
+    # per-scenario his averaging-window span (hours) -- used below to flag
+    # scenarios whose dia_avg averaging period doesn't actually match, since
+    # zeta/rho are time-averaged over "whatever the paired his file
+    # contains" with no check that this span equals the others'
+    his_window_hr = {}
 
     for name in SCENARIOS:
         dia_f = dia_by_prefix[name][prefix]
         his_f = his_by_prefix[name].get(prefix)
+        if his_f is None:
+            print(f'  WARNING: no his match for {os.path.basename(dia_f)} '
+                  f'({name}, prefix {prefix}) — skipping this scenario/time')
 
-        with Dataset(dia_f, 'r') as dnc:
-            ocean_time = np.array(dnc['ocean_time'][:])
-            if dt0 is None:
-                dt0 = num2date(ocean_time, 'seconds since 1995-01-01',
-                               only_use_cftime_datetimes=False)[0]
+        loaded = load_scenario_data(dia_f, his_f, PLOT_VARS)
+        if dt0 is None:
+            dt0 = loaded['dt0']
+        if loaded['his_window_hr'] is not None:
+            his_window_hr[name] = loaded['his_window_hr']
+        scen_data[name] = loaded
 
-            zr3d = None
-            rho3d = None
-            if his_f is not None:
-                with Dataset(his_f, 'r') as hnc:
-                    zeta_mean = np.nanmean(clean(hnc['zeta'][:]), axis=0)
-                    rho3d = (np.nanmean(clean(hnc['rho'][:]), axis=0)
-                              + ISO_RHO_OFF) * mask_plot
-                zr3d = depths.get_zr_zeta(dnc, grdnc, zeta_mean)
-            else:
-                print(f'  WARNING: no his match for {os.path.basename(dia_f)} '
-                      f'({name}, prefix {prefix}) — skipping this scenario/time')
-
-            var3d = {}
-            for var in PLOT_VARS:
-                if var in dnc.variables:
-                    var3d[var] = clean(dnc[var][0]) * mask_plot
-
-        scen_data[name] = dict(zr3d=zr3d, rho3d=rho3d, var3d=var3d)
+    # dia_avg's actual averaging period isn't stored in the file itself (one
+    # time record per file) -- the his-file window is our only proxy for it.
+    # A mismatch here means the per-scenario zeta/rho (and thus depths/
+    # isopycnals) aren't averaged over the same real time span, so panels
+    # would be silently non-comparable.
+    if len(set(his_window_hr.values())) > 1:
+        print(f'  WARNING: mismatched his averaging window at {prefix} -- '
+              f'per-scenario spans (hr): {his_window_hr} -- dia_avg '
+              f'averaging period may differ between scenarios')
 
     dstr = f'{dt0.year}-{dt0.month:02d}-{dt0.day:02d}-{dt0.hour:02d}'
 

@@ -1,9 +1,20 @@
 """
-Diagonal cross-section from coast to offshore using native s_rho ROMS output.
-Sibling of plot_cs_diag_o2.py, restricted to 4 scenarios and reading DIAT/SP
-nutrient-limitation and uptake diagnostics from raw mc60_bgc_dia_avg files
-(same variable set as plot_hov_transect_raw_bgcdia.py) instead of a single
-his/bgc variable.
+Box-averaged diagonal cross-section from coast to offshore, using native
+s_rho ROMS output. Box-average variant of ../plot_cs_diag_bgcdia.py, reading
+DIAT/SP nutrient-limitation and uptake diagnostics from raw mc60_bgc_dia_avg
+files (same variable set as plot_hov_transect_raw_bgcdia.py) instead of a
+single his/bgc variable.
+
+'_alltime' variant: PAR/TOT_PROD are plotted from each scenario's FULL
+continuous dia_avg record (see the full-record-pass paragraph below), not
+just the LIM/UPTAKE rerun window. Sibling script plot_cs_diag_bgcdia_box_
+rerun4.py instead restricts every variable, including PAR/TOT_PROD, to the
+4-timestep rerun window -- use that one if you don't want the extra,
+non-time-synchronized PAR/TOT_PROD coverage this script adds. The LIM/
+UPTAKE pass below is otherwise identical between the two scripts (kept here
+too so this file is runnable standalone); its output PNGs are therefore
+redundant with rerun4.py's, which is harmless since both are idempotent
+(existing PNGs are skipped, not overwritten).
 
 Scenarios: tidesampwec (regular dia/ output); tidesnowec, notidesnowec, and
 ampwec (rerun bgc_dia_avg output only, at dia/rerun_bgcdia/, covering a
@@ -28,9 +39,9 @@ and each panel's title shows that scenario's actual averaging period
 (Δt≈Nh, from the gap to its own previous dia_avg file) so the coarser
 scenarios aren't mistaken for equally time-resolved.
 
-mc60_bgc_dia_avg files have no zeta/rho, so depths (for the y-axis) and
-sigma-t (for the isopycnal contour overlay) are reconstructed by pairing
-each dia_avg file with the regular his/ file sharing the same
+mc60_bgc_dia_avg files have no zeta/rho, so depths (for the box-average z
+grid) and sigma-t (for the isopycnal contour overlay) are reconstructed by
+pairing each dia_avg file with the regular his/ file sharing the same
 YYYYMMDDHHMM filename prefix, and time-averaging that his file's zeta/rho
 across its own internal time steps. This his-based window is always ~11h
 (a fixed his-file chunk size), which only matches the dia_avg averaging
@@ -40,9 +51,17 @@ whenever the his window and the dia_avg's actual Δt diverge by >50%. A
 scenario/time with no matching his file at all is skipped for that panel.
 
 Saves one PNG per (variable, transect, time step) — same pattern as
-plot_cs_diag_o2.py.
+plot_cs_diag_o2_box.py. PAR/TOT_PROD (full-record pass) are saved under a
+distinct 'box_alltime_' filename stem specifically so they never collide
+with plot_cs_diag_bgcdia_box_rerun4.py's identically-timestamped but
+differently-sourced (rerun-window-only) PAR/TOT_PROD output -- without
+this, whichever script ran first would silently "win" via the existing
+skip-if-exists caching, leaving the other's data unwritten.
 
-Output: ./figs/snapshots/cs_diag_bgcdia_{var}-<ts|tn>-YYYY-MM-DD-HH.png
+Output: ./figs/snapshots/cs_diag_bgcdia_box_{var}-<ts|tn>-YYYY-MM-DD-HH.png
+        (LIM/UPTAKE)
+        ./figs/snapshots/cs_diag_bgcdia_box_alltime_{var}-<ts|tn>-YYYY-MM-DD-HH.png
+        (PAR/TOT_PROD, full record)
 """
 
 import os
@@ -58,8 +77,8 @@ import cmocean
 
 plt.rcParams.update({'font.size': 14})
 from netCDF4 import Dataset, num2date
-from scipy.ndimage import map_coordinates
 import ROMS_depths as depths
+import cs_boxavg as cb
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -80,8 +99,8 @@ LABELS = {
 # bgc_dia_avg output lands in dia/rerun_bgcdia/, not dia/ itself. tidesampwec
 # is a full continuous run, so it uses the default 'dia'. ampwec's SCENARIOS
 # path is the base root (his/ + dia/rerun_bgcdia/ live directly under it) --
-# NOT .../ampwec/everything, which is a separate flat-layout continuous run
-# whose dia_avg files lack the LIM/UPTAKE variables.
+# NOT .../ampwec/everything, a separate flat-layout continuous run whose
+# dia_avg files lack the LIM/UPTAKE variables.
 DIA_SRC_SUBDIR = {
     'tidesnowec':   'dia/rerun_bgcdia',
     'notidesnowec': 'dia/rerun_bgcdia',
@@ -103,13 +122,13 @@ SP_LIM_VARS      = ['SP_N_LIM', 'SP_FE_LIM', 'SP_PO4_LIM',
 DIAT_UPTAKE_VARS = ['DIAT_NO3_UPTAKE', 'DIAT_NH4_UPTAKE', 'DIAT_NO2_UPTAKE',
                      'DIAT_SI_UPTAKE']
 SP_UPTAKE_VARS   = ['SP_NO3_UPTAKE', 'SP_NH4_UPTAKE', 'SP_NO2_UPTAKE']
-PAR_VARS         = ['PAR']
 PROD_VARS        = ['TOT_PROD']
+PAR_VARS         = ['PAR']
 
 LIM_VARS    = DIAT_LIM_VARS + SP_LIM_VARS
 UPTAKE_VARS = DIAT_UPTAKE_VARS + SP_UPTAKE_VARS
 PLOT_VARS        = LIM_VARS + UPTAKE_VARS   # rerun-window pass
-FULL_RECORD_VARS = PAR_VARS + PROD_VARS     # full-record pass (see below)
+FULL_RECORD_VARS = PROD_VARS + PAR_VARS     # full-record pass (see below)
 
 # TOT_PROD is stored as mmol C m^-3 s^-1; convert to d^-1 for readability,
 # matching the convention used by the other TOT_PROD/NPP plot scripts
@@ -134,8 +153,8 @@ VAR_LONG_NAME = {
     'SP_NO3_UPTAKE':     'Small phyto NO3 uptake',
     'SP_NH4_UPTAKE':     'Small phyto NH4 uptake',
     'SP_NO2_UPTAKE':     'Small phyto NO2 uptake',
-    'PAR':               'PAR',
     'TOT_PROD':          'NPP',
+    'PAR':               'PAR',
 }
 
 VAR_CONFIGS = {}
@@ -149,15 +168,15 @@ for _v in UPTAKE_VARS:
         cmap=cmocean.cm.algae, vmin=None, vmax=None,   # resolved per-file from plotted data
         label=f'{VAR_LONG_NAME[_v]} (mmol m$^{{-2}}$ s$^{{-1}}$)',
     )
-for _v in PAR_VARS:
-    VAR_CONFIGS[_v] = dict(
-        cmap=cmocean.cm.solar, vmin=None, vmax=None,   # resolved per-file from plotted data
-        label=f'{VAR_LONG_NAME[_v]} (W m$^{{-2}}$)',
-    )
 for _v in PROD_VARS:
     VAR_CONFIGS[_v] = dict(
         cmap=cmocean.cm.algae, vmin=None, vmax=None,   # resolved per-file from plotted data
         label=f'{VAR_LONG_NAME[_v]} (mmol C m$^{{-3}}$ d$^{{-1}}$)',
+    )
+for _v in PAR_VARS:
+    VAR_CONFIGS[_v] = dict(
+        cmap=cmocean.cm.solar, vmin=None, vmax=None,   # resolved per-file from plotted data
+        label='PAR (W m$^{-2}$)',
     )
 
 RHO_OFFSET = 0.0
@@ -179,8 +198,8 @@ DEPTH_LIM1 = -90      # transect 1 — y-axis bottom (m)
 LENGTH_XI = 250        # transect length in xi cells (both)
 N_PTS     = 300        # interpolation resolution along transect (both)
 
-GRD      = 'mc60_grd.nc'
-SAVEPATH = './figs/snapshots/'
+GRD      = cb.GRD
+SAVEPATH = cb.figpath('snapshots') + '/'
 
 # ---------------------------------------------------------------------------
 # Load grid
@@ -195,25 +214,13 @@ mask_plot = mask_rho.astype(float)
 mask_plot[mask_plot == 0] = np.nan
 
 # ---------------------------------------------------------------------------
-# Build transect coordinates (goes in -xi direction)
+# Build box transects (goes in -xi direction; box straddles it perpendicularly)
 # ---------------------------------------------------------------------------
-def build_transect(eta0, xi0, slope, depth_lim):
-    xi  = np.linspace(xi0,  xi0  - LENGTH_XI, N_PTS)
-    eta = np.linspace(eta0, eta0 + slope * (-LENGTH_XI), N_PTS)
-    crd = np.array([eta, xi])
-    return dict(
-        coords    = crd,
-        lon       = map_coordinates(lon, crd, order=1, mode='nearest'),
-        lat       = map_coordinates(lat, crd, order=1, mode='nearest'),
-        mask      = map_coordinates(mask_rho.astype(float), crd,
-                                    order=0, mode='nearest') > 0.5,
-        depth_lim = depth_lim,
-        eta0=eta0, xi0=xi0, slope=slope,
-    )
-
 TRANSECTS = [
-    build_transect(ETA0, XI0, SLOPE,  DEPTH_LIM0),
-    build_transect(ETA1, XI1, SLOPE1, DEPTH_LIM1),
+    cb.build_box_transect(lon, lat, mask_rho, ETA0, XI0, SLOPE,  DEPTH_LIM0,
+                          LENGTH_XI, N_PTS, name='ts'),
+    cb.build_box_transect(lon, lat, mask_rho, ETA1, XI1, SLOPE1, DEPTH_LIM1,
+                          LENGTH_XI, N_PTS, name='tn'),
 ]
 TRANSECT_NAMES = ['ts', 'tn']   # ts = south transect (ETA0), tn = north transect (ETA1)
 
@@ -224,25 +231,6 @@ def clean(arr):
     """Convert to ndarray, fill netCDF sentinel fill values with nan."""
     arr = np.array(arr)
     return np.where(np.abs(arr) > 1e30, np.nan, arr)
-
-
-def interp_transect(field2d, coords, mask_t):
-    nan_mask  = np.isnan(field2d)
-    filled    = np.where(nan_mask, 0.0, field2d)
-    row       = map_coordinates(filled, coords, order=1, mode='nearest')
-    nan_along = map_coordinates(nan_mask.astype(float), coords,
-                                order=1, mode='nearest') > 0.5
-    row[nan_along | ~mask_t] = np.nan
-    return row
-
-
-def interp_section(field3d, coords, mask_t):
-    """Interpolate a 3D (s_rho, eta, xi) field along a transect. Returns (s_rho, N_PTS)."""
-    n_s = field3d.shape[0]
-    out = np.full((n_s, N_PTS), np.nan)
-    for iz in range(n_s):
-        out[iz] = interp_transect(field3d[iz], coords, mask_t)
-    return out
 
 
 def load_scenario_data(dia_f, his_f, vars_to_load):
@@ -340,7 +328,10 @@ for prefix in common_prefixes:
 
     dstr = f'{dt0.year}-{dt0.month:02d}-{dt0.day:02d}-{dt0.hour:02d}'
 
-    # precompute zr_t / rho_t once per (scenario, transect) — reused across all vars
+    # precompute the box-averaged rho section once per (scenario, transect) --
+    # reused across all vars. zr3d itself (raw, not box-averaged) is kept
+    # around too, since boxavg_section needs the raw field for each var's
+    # own box average.
     depth_cache = {}
     for name in SCENARIOS:
         zr3d, rho3d = scen_data[name]['zr3d'], scen_data[name]['rho3d']
@@ -348,32 +339,35 @@ for prefix in common_prefixes:
             if zr3d is None:
                 depth_cache[(name, ti)] = (None, None)
                 continue
-            zr_t  = interp_section(zr3d, tr['coords'], tr['mask'])
-            rho_t = interp_section(rho3d, tr['coords'], tr['mask'])
-            depth_cache[(name, ti)] = (zr_t, rho_t)
+            rho_plot = cb.boxavg_section(rho3d, zr3d, tr)
+            depth_cache[(name, ti)] = (zr3d, rho_plot)
 
     for var in PLOT_VARS:
         cfg = VAR_CONFIGS[var]
 
-        # precompute this var's plotted (transect-interpolated) section for
-        # every (scenario, transect) — reused for both the vmin/vmax calc
-        # below and the actual plotting loop, so interp_section only runs
-        # once per (scenario, transect)
-        plotted = {}   # (name, ti) -> (zr_t, var_t, rho_t)
+        fnames = {ti: f'{SAVEPATH}cs_diag_bgcdia_box_{var}-{TRANSECT_NAMES[ti]}-{dstr}.png'
+                  for ti in range(len(TRANSECTS))}
+        if all(os.path.exists(f) for f in fnames.values()):
+            continue
+
+        # precompute this var's box-averaged section for every
+        # (scenario, transect) — reused for both the vmin/vmax calc below
+        # and the actual plotting loop
+        plotted = {}   # (name, ti) -> (var_plot, rho_plot)
         for name in SCENARIOS:
             if var not in scen_data[name]['var3d']:
                 continue
             for ti, tr in enumerate(TRANSECTS):
-                zr_t, rho_t = depth_cache[(name, ti)]
-                if zr_t is None:
+                zr3d, rho_plot = depth_cache[(name, ti)]
+                if zr3d is None:
                     continue
-                var_t = interp_section(scen_data[name]['var3d'][var],
-                                       tr['coords'], tr['mask'])
-                plotted[(name, ti)] = (zr_t, var_t, rho_t)
+                var_plot = cb.boxavg_section(scen_data[name]['var3d'][var], zr3d, tr)
+                plotted[(name, ti)] = (var_plot, rho_plot)
 
         # resolve vmin/vmax for uptake vars from the actual plotted cross-
-        # section data — LIM vars keep their fixed 0-1 scale
-        sections = [v[1] for v in plotted.values()]
+        # section data (not the full 3D domain, which can be dominated by
+        # values far from the transect) — LIM vars keep their fixed 0-1 scale
+        sections = [v[0] for v in plotted.values()]
         if cfg['vmin'] is None:
             vmin = min(np.nanmin(s) for s in sections) if sections else 0.0
         else:
@@ -384,22 +378,26 @@ for prefix in common_prefixes:
             vmax = cfg['vmax']
 
         for ti, tr in enumerate(TRANSECTS):
+            fname = fnames[ti]
+            if os.path.exists(fname):
+                continue
+
             fig, axes = plt.subplots(len(SCENARIOS), 1, sharex=True,
                                      figsize=(10, 3 * len(SCENARIOS)))
             pc = None
+            zgrid = tr['zgrid']
 
             for ax, name in zip(axes, SCENARIOS):
                 entry = plotted.get((name, ti))
                 if entry is None:
                     ax.set_title(LABELS[name])
                     continue
-                zr_plot, var_plot, rho_plot = entry
+                var_plot, rho_plot = entry
 
-                pc = ax.pcolormesh(tr['lon'], zr_plot, var_plot,
+                pc = ax.pcolormesh(tr['lon'], zgrid, var_plot,
                                    cmap=cfg['cmap'], vmin=vmin, vmax=vmax,
                                    shading='nearest')
-                lon_2d = np.tile(tr['lon'], (zr_plot.shape[0], 1))
-                cs = ax.contour(lon_2d, zr_plot, rho_plot, levels=ISO_LEVELS,
+                cs = ax.contour(tr['lon'], zgrid, rho_plot, levels=ISO_LEVELS,
                                 colors='k', linewidths=0.8)
                 ax.clabel(cs, fmt='%.2f', fontsize=7)
                 ax.set_ylim([tr['depth_lim'], 0])
@@ -425,7 +423,6 @@ for prefix in common_prefixes:
             fig.suptitle(f'{dt0.year}-{dt0.month:02d}-{dt0.day:02d} '
                          f'{dt0.hour:02d}:{dt0.minute:02d} UTC', y=0.96)
 
-            fname = f'{SAVEPATH}cs_diag_bgcdia_{var}-{TRANSECT_NAMES[ti]}-{dstr}.png'
             plt.savefig(fname, dpi=800, bbox_inches='tight')
             plt.close()
             print(f'  saved -> {fname}')
@@ -499,35 +496,46 @@ for prefix in full_prefixes:
             if zr3d is None:
                 depth_cache[(name, ti)] = (None, None)
                 continue
-            zr_t  = interp_section(zr3d, tr['coords'], tr['mask'])
-            rho_t = interp_section(rho3d, tr['coords'], tr['mask'])
-            depth_cache[(name, ti)] = (zr_t, rho_t)
+            rho_plot = cb.boxavg_section(rho3d, zr3d, tr)
+            depth_cache[(name, ti)] = (zr3d, rho_plot)
 
     for var in FULL_RECORD_VARS:
         cfg = VAR_CONFIGS[var]
 
-        plotted = {}
+        # 'box_alltime_' stem (not 'box_') so this never collides with
+        # plot_cs_diag_bgcdia_box_rerun4.py's rerun-window-only PAR/TOT_PROD
+        # output at the same dstr -- see module docstring
+        fnames = {ti: f'{SAVEPATH}cs_diag_bgcdia_box_alltime_{var}-{TRANSECT_NAMES[ti]}-{dstr}.png'
+                  for ti in range(len(TRANSECTS))}
+        if all(os.path.exists(f) for f in fnames.values()):
+            continue
+
+        plotted = {}   # (name, ti) -> (var_plot, rho_plot)
         for name in scen_data:
             if var not in scen_data[name]['var3d']:
                 continue
             for ti, tr in enumerate(TRANSECTS):
-                zr_t, rho_t = depth_cache.get((name, ti), (None, None))
-                if zr_t is None:
+                zr3d, rho_plot = depth_cache.get((name, ti), (None, None))
+                if zr3d is None:
                     continue
-                var_t = interp_section(scen_data[name]['var3d'][var],
-                                       tr['coords'], tr['mask'])
-                plotted[(name, ti)] = (zr_t, var_t, rho_t)
+                var_plot = cb.boxavg_section(scen_data[name]['var3d'][var], zr3d, tr)
+                plotted[(name, ti)] = (var_plot, rho_plot)
 
-        sections = [v[1] for v in plotted.values()]
+        sections = [v[0] for v in plotted.values()]
         if not sections:
             continue
         vmin = cfg['vmin'] if cfg['vmin'] is not None else min(np.nanmin(s) for s in sections)
         vmax = cfg['vmax'] if cfg['vmax'] is not None else max(np.nanmax(s) for s in sections)
 
         for ti, tr in enumerate(TRANSECTS):
+            fname = fnames[ti]
+            if os.path.exists(fname):
+                continue
+
             fig, axes = plt.subplots(len(SCENARIOS), 1, sharex=True,
                                      figsize=(10, 3 * len(SCENARIOS)))
             pc = None
+            zgrid = tr['zgrid']
 
             for ax, name in zip(axes, SCENARIOS):
                 title = LABELS[name]
@@ -538,13 +546,12 @@ for prefix in full_prefixes:
                 if entry is None:
                     ax.set_title(title)
                     continue
-                zr_plot, var_plot, rho_plot = entry
+                var_plot, rho_plot = entry
 
-                pc = ax.pcolormesh(tr['lon'], zr_plot, var_plot,
+                pc = ax.pcolormesh(tr['lon'], zgrid, var_plot,
                                    cmap=cfg['cmap'], vmin=vmin, vmax=vmax,
                                    shading='nearest')
-                lon_2d = np.tile(tr['lon'], (zr_plot.shape[0], 1))
-                cs = ax.contour(lon_2d, zr_plot, rho_plot, levels=ISO_LEVELS,
+                cs = ax.contour(tr['lon'], zgrid, rho_plot, levels=ISO_LEVELS,
                                 colors='k', linewidths=0.8)
                 ax.clabel(cs, fmt='%.2f', fontsize=7)
                 ax.set_ylim([tr['depth_lim'], 0])
@@ -570,7 +577,6 @@ for prefix in full_prefixes:
             fig.suptitle(f'{dt0.year}-{dt0.month:02d}-{dt0.day:02d} '
                          f'{dt0.hour:02d}:{dt0.minute:02d} UTC', y=0.96)
 
-            fname = f'{SAVEPATH}cs_diag_bgcdia_{var}-{TRANSECT_NAMES[ti]}-{dstr}.png'
             plt.savefig(fname, dpi=800, bbox_inches='tight')
             plt.close()
             print(f'  saved -> {fname}')

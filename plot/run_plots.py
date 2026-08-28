@@ -227,6 +227,11 @@ SCRIPTS: Dict[str, Tuple[str, str]] = {
         "snapshot",
         "Wind speed and wave amplitude time series",
     ),
+    "plot_cs_front_transect": (
+        "snapshot",
+        "Per-scenario front locator maps + temp/vort/NO3/w/Akt/Akv/phytoC "
+        "cross-sections, all transects stacked, single instant, cached",
+    ),
 
     # --- Utilities ---
     "make_mask": (

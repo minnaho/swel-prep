@@ -10,6 +10,7 @@ __pycache__/
 
 # per-scenario job logs
 log_*.txt
+*.log
 
 # local tool settings
 .claude/

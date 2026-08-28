@@ -2,11 +2,14 @@
 Hovmöller of DIAT/SP nutrient-limitation and uptake diagnostics along the two
 cross-shore transects defined in plot_cs_diag*.py, computed directly from raw
 mc60_bgc_dia_avg files (no z-slicing). Sibling of plot_hov_transect_raw.py,
-restricted to 3 scenarios and the bgc_dia_avg diagnostic variables.
+restricted to 4 scenarios and the bgc_dia_avg diagnostic variables.
 
 Scenarios: tidesampwec (regular dia/ output — a full continuous run, not a
-rerun subset), tidesnowec and notidesnowec (rerun bgc_dia_avg output only,
-at dia/rerun_bgcdia/, covering a limited rerun date window).
+rerun subset); tidesnowec, notidesnowec, and ampwec (rerun bgc_dia_avg
+output only, at dia/rerun_bgcdia/, covering a limited rerun date window --
+ampwec's continuous everything/ dia_avg output lacks the LIM/UPTAKE
+variables entirely, same reason tidesnowec/notidesnowec needed a targeted
+rerun).
 
 mc60_bgc_dia_avg files have no zeta variable, so depths are reconstructed by
 pairing each dia_avg file with the regular his/ file sharing the same
@@ -56,18 +59,25 @@ SCENARIOS = {
     'tidesampwec':  '/data/project3/minnaho/swel/tides/mc60/ampwec',
     'tidesnowec':   '/data/project3/minnaho/swel/tides/mc60/nowec/output',
     'notidesnowec': '/data/project3/minnaho/swel/notides/mc60/nowec',
+    'ampwec':       '/data/project3/minnaho/swel/notides/mc60/wec/ampwec',
 }
 LABELS = {
     'tidesampwec':  'tides, amplified WEC',
     'tidesnowec':   'tides, no WEC',
     'notidesnowec': 'no tides, no WEC',
+    'ampwec':       'no tides, amplified WEC',
 }
-# tidesnowec/notidesnowec only reran this date window — rerun bgc_dia_avg
-# output lands in dia/rerun_bgcdia/, not dia/ itself. tidesampwec is a full
-# continuous run, so it uses the default 'dia' (see DIA_SRC_SUBDIR.get below).
+# tidesnowec/notidesnowec/ampwec only reran this date window — rerun
+# bgc_dia_avg output lands in dia/rerun_bgcdia/, not dia/ itself. tidesampwec
+# is a full continuous run, so it uses the default 'dia' (see
+# DIA_SRC_SUBDIR.get below). ampwec's SCENARIOS path is the base root
+# (his/ + dia/rerun_bgcdia/ live directly under it) -- NOT
+# .../ampwec/everything, a separate flat-layout continuous run whose
+# dia_avg files lack the LIM/UPTAKE variables.
 DIA_SRC_SUBDIR = {
     'tidesnowec':   'dia/rerun_bgcdia',
     'notidesnowec': 'dia/rerun_bgcdia',
+    'ampwec':       'dia/rerun_bgcdia',
 }
 
 # ---------------------------------------------------------------------------

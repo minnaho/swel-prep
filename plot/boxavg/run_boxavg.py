@@ -16,7 +16,7 @@ Usage:
     python run_boxavg.py --categories diag         # run only the ts/tn diagonal family
     python run_boxavg.py --scripts plot_cs_diag_box plot_cs_diag_rho_box
     python run_boxavg.py --workers 8 --timeout 3600
-    python run_boxavg.py --exclude plot_cs_diag_bgcdia_box   # skip a slow one
+    python run_boxavg.py --exclude plot_cs_diag_bgcdia_box_alltime   # skip the slower full-record one
 """
 
 from __future__ import annotations
@@ -66,9 +66,21 @@ SCRIPTS: Dict[str, Tuple[str, str]] = {
         "diag",
         "Total phyto C cross-section, 6 scenarios, box-averaged",
     ),
-    "plot_cs_diag_bgcdia_box": (
+    "plot_cs_diag_bgcdia_box_rerun4": (
         "diag",
-        "18 DIAT/SP limitation + uptake diagnostics, 3 scenarios, box-averaged",
+        "18 DIAT/SP limitation + uptake diagnostics + PAR/TOT_PROD, 4 "
+        "scenarios, box-averaged, restricted to the 4-timestep rerun window",
+    ),
+    "plot_cs_diag_bgcdia_box_alltime": (
+        "diag",
+        "Same as plot_cs_diag_bgcdia_box_rerun4, but PAR/TOT_PROD are also "
+        "plotted from each scenario's full continuous dia_avg record "
+        "(non-time-synchronized across scenarios)",
+    ),
+    "plot_cs_diag_bgcdia_avg_diff_box_3x2": (
+        "diff",
+        "Time-mean DIAT/SP limitation+uptake and PAR/TOT_PROD diffs from "
+        "notidesnowec, native s_rho, box-averaged, 3x2-style grid",
     ),
     "plot_cs_ini_box": (
         "diag",
@@ -178,8 +190,8 @@ Examples
   # Run specific scripts:
   python run_boxavg.py --scripts plot_cs_diag_box plot_cs_diag_rho_box
 
-  # Run everything except the slow 18-variable bgcdia loop:
-  python run_boxavg.py --exclude plot_cs_diag_bgcdia_box
+  # Run everything except the slow full-record bgcdia variant:
+  python run_boxavg.py --exclude plot_cs_diag_bgcdia_box_alltime
 
   # 8 workers, 1-hour timeout per script, verbose output:
   python run_boxavg.py --workers 8 --timeout 3600 --verbose
